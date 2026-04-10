@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>LAN Manager - Lucas</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #333; color: white; }
+        .online { color: green; font-weight: bold; }
+        .btn { padding: 10px; background: blue; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Computadores na Rede</h1>
+    <a href="/" class="btn">Atualizar Scanner</a>
+    <br><br>
+    <table>
+        <thead>
+            <tr>
+                <th>IP</th>
+                <th>Nome (Hostname)</th>
+                <th>MAC Address</th>
+                <th>Fabricante</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in dispositivos %}
+            <tr>
+                <td>{{ d.ip }}</td>
+                <td>{{ d.name }}</td>
+                <td>{{ d.mac }}</td>
+                <td>{{ d.vendor }}</td>
+                <td class="online">{{ d.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
