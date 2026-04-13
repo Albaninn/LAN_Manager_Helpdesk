@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, Depends, BackgroundTasks
+from fastapi import FastAPI, Request, Depends, BackgroundTasks, Form
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -26,20 +27,31 @@ def get_db():
         db.close()
 
 @app.get("/")
-async def home(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    # Opção Pro: Rodar o scan em segundo plano para a página não ficar "pendurada"
-    # Assim o utilizador vê o que já está na base de dados imediatamente
-    background_tasks.add_task(scan_network, db)
+async def home(request: Request, rede: str = None, db: Session = Depends(get_db)):
+    # Busca os dispositivos
+    query = db.query(models.Dispositivo)
     
-    # Procura todos os dispositivos guardados na base de dados
-    # Ordenamos por IP para ficar organizado
-    dispositivos = db.query(models.Dispositivo).order_by(models.Dispositivo.ip).all()
+    # Se clicar no filtro, filtramos a query
+    if rede:
+        query = query.filter(models.Dispositivo.rede_id == rede)
+    
+    dispositivos = query.order_by(models.Dispositivo.ip).all()
     
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"dispositivos": dispositivos}
+        context={"dispositivos": dispositivos, "rede_atual": rede}
     )
+
+from fastapi import Form
+
+@app.post("/salvar_apelido")
+async def salvar_apelido(mac: str = Form(...), apelido: str = Form(...), db: Session = Depends(get_db)):
+    dispositivo = db.query(models.Dispositivo).filter(models.Dispositivo.mac == mac).first()
+    if dispositivo:
+        dispositivo.apelido = apelido
+        db.commit()
+    return RedirectResponse(url="/", status_code=303)
 
 # Rota futura para editar o apelido (exemplo de como o ORM facilita)
 @app.post("/atualizar_apelido/{mac}")
