@@ -4,6 +4,7 @@ venv/
 
 # Arquivos de configuração sensíveis
 .env
+database.db
 known_devices.json
 
 # Cache do Python
