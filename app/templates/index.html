@@ -21,9 +21,16 @@
     </div>
 
     <div class="mb-3">
-        <a href="/" class="btn btn-outline-secondary btn-sm">Todos</a>
-        <a href="/?rede=85.x" class="btn btn-outline-info btn-sm">Rede .85 (Cabo)</a>
-        <a href="/?rede=200.x" class="btn btn-outline-warning btn-sm">Rede .200 (Wi-Fi)</a>
+        <span class="text-muted me-2">Exibir:</span>
+        <a href="/" class="btn btn-sm {{ 'btn-secondary' if not filtro_atual else 'btn-outline-secondary' }}">
+            Todos ({{ dispositivos|length }})
+        </a>
+        <a href="/?filtro=online" class="btn btn-sm {{ 'btn-success' if filtro_atual == 'online' else 'btn-outline-success' }}">
+            Online agora
+        </a>
+        <a href="/?filtro=cadastrados" class="btn btn-sm {{ 'btn-primary' if filtro_atual == 'cadastrados' else 'btn-outline-primary' }}">
+            Apenas com Apelido
+        </a>
     </div>
 
     <div class="table-container bg-white">

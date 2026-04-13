@@ -52,7 +52,12 @@ def scan_network(db: Session):
                         rede_id=rede_id
                     )
                     db.add(novo_dispositivo)
-        
+    
+        limite_tempo = datetime.now() - timedelta(minutes=5)
+    db.query(models.Dispositivo).filter(
+        models.Dispositivo.ultima_vez_visto < limite_tempo
+    ).update({"status": "down"})
+
     db.commit()
 
     # Opcional: Marcar como 'down' quem não foi visto nesta varredura total

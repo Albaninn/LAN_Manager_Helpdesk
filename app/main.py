@@ -27,20 +27,21 @@ def get_db():
         db.close()
 
 @app.get("/")
-async def home(request: Request, rede: str = None, db: Session = Depends(get_db)):
-    # Busca os dispositivos
+async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)):
     query = db.query(models.Dispositivo)
     
-    # Se clicar no filtro, filtramos a query
-    if rede:
-        query = query.filter(models.Dispositivo.rede_id == rede)
+    if filtro == "online":
+        query = query.filter(models.Dispositivo.status == "up")
+    elif filtro == "cadastrados":
+        # Filtra apenas os que possuem apelido preenchido
+        query = query.filter(models.Dispositivo.apelido != None)
     
     dispositivos = query.order_by(models.Dispositivo.ip).all()
     
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"dispositivos": dispositivos, "rede_atual": rede}
+        context={"dispositivos": dispositivos, "filtro_atual": filtro}
     )
 
 from fastapi import Form
