@@ -9,8 +9,10 @@
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     
     <style>
-        .status-up { color: #28a745; font-weight: bold; }
-        .status-down { color: #dc3545; font-weight: bold; }
+        .status-up { color: #28a745; font-weight: bold; }          /* Verde */
+        .status-down { color: #dc3545; font-weight: bold; }        /* Vermelho */
+        .status-inacessivel { color: #fd7e14; font-weight: bold; } /* Laranja */
+        
         .table-container { margin: 20px 0; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; padding: 15px; background: white; }
         .badge-rede { font-size: 0.8em; }
         .device-offline { opacity: 0.6; background-color: #f8f9fa; }
@@ -55,7 +57,7 @@
             </thead>
             <tbody>
                 {% for disp in dispositivos %}
-                <tr class="{{ 'device-offline' if disp.status != 'up' else '' }}">
+                <tr class="{{ 'device-offline' if disp.status == 'down' else '' }}">
                     <td><code>{{ disp.ip }}</code></td>
                     
                     <td data-order="{{ '0_' + disp.apelido if disp.apelido else '1_' + disp.hostname_real }}">
@@ -85,8 +87,14 @@
                         </span>
                     </td>
                     <td>
-                        <span class="{{ 'status-up' if disp.status == 'up' else 'status-down' }}">
-                            {{ '● UP' if disp.status == 'up' else '○ OFF' }}
+                        <span class="status-{{ disp.status }}">
+                            {% if disp.status == 'up' %}
+                                ● UP
+                            {% elif disp.status == 'down' %}
+                                ○ OFF
+                            {% else %}
+                                ⚠️ INACESSÍVEL
+                            {% endif %}
                         </span>
                     </td>
                 </tr>
@@ -108,7 +116,6 @@
                 <div class="mb-0">
                     <label for="inputApelido" class="form-label fw-bold">Apelido ou Nome do Setor</label>
                     <input type="text" name="apelido" id="inputApelido" class="form-control form-control-lg" placeholder="Ex: Rack Principal, PC - João...">
-                    <div class="form-text text-muted">Este nome será usado para facilitar a busca e organização.</div>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0">
@@ -131,9 +138,7 @@ $(document).ready(function() {
             url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
         },
         pageLength: 50,
-        // ORDENAÇÃO PADRÃO: 
-        // 1ª Prioridade: Coluna de Identificação (Índice 1) em ordem Ascendente
-        // 2ª Prioridade: Status (Índice 5) em ordem Descendente (UP primeiro)
+        // Ordenação por Identificação (0_ apelidos no topo) e Status
         order: [[1, 'asc'], [5, 'desc']],
         columnDefs: [
             { targets: 1, type: 'string' }
