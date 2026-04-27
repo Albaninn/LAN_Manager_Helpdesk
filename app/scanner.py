@@ -4,14 +4,15 @@ from sqlalchemy.orm import Session
 from .models import Dispositivo
 from . import models # Import necessário para a query de update
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime
 
 load_dotenv()
 
 def scan_network(db: Session):
     # 1. Registra o momento exato em que o scan começou
     horario_inicio_scan = datetime.now()
-    
+    print(f"DEBUG: Iniciando ciclo de limpeza. Horário corte: {horario_inicio_scan}")
+
     # Pega os ranges do .env
     network_ranges = os.getenv("NETWORK_RANGES", "").split()
     
@@ -20,9 +21,10 @@ def scan_network(db: Session):
     for rede in network_ranges:
         print(f"Iniciando varredura na rede: {rede}...")
         
-        # Usamos -sn para ping e -PS445 para ser mais agressivo com máquinas Windows
-        nm.scan(hosts=rede, arguments='-sn -PS445 -T4')
-        
+        # Aumentamos a agressividade: -PR (ARP) e -PS445 (SMB)
+        # O --max-retries 1 evita que ele fique "imaginando" que o host existe
+        nm.scan(hosts=rede, arguments='-sn -PR -PS445 --max-retries 1 -T4')
+
         for host in nm.all_hosts():
             try:
                 # Coleta dados básicos
@@ -61,17 +63,16 @@ def scan_network(db: Session):
             except Exception as e:
                 print(f"Erro ao processar host {host}: {e}")
                 continue
+        db.commit()
     
-    # Salva as atualizações de quem está UP
-    db.commit()
-
-    # 2. LIMPEZA DE FANTASMAS:
-    # Todo dispositivo que ainda está como 'up', mas cuja 'ultima_vez_visto' 
-    # é MAIS ANTIGA que o início deste scan, significa que sumiu da rede.
-    db.query(models.Dispositivo).filter(
+    # 2. O FILTRO DA VERDADE
+    # Qualquer um que ainda esteja 'up' mas o 'ultima_vez_visto' 
+    # é anterior ao 'horario_inicio_scan', COM CERTEZA não foi visto agora.
+    afetados = db.query(models.Dispositivo).filter(
         models.Dispositivo.status == "up",
         models.Dispositivo.ultima_vez_visto < horario_inicio_scan
     ).update({"status": "down"})
 
     db.commit()
+    print(f"DEBUG: {afetados} dispositivos foram marcados como OFFLINE.")
     print(f"Scan finalizado. Varredura concluída em {datetime.now() - horario_inicio_scan}")

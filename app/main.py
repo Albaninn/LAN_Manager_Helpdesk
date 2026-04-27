@@ -28,6 +28,11 @@ def get_db():
 
 @app.get("/")
 async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)):
+    print("[DEBUG] Rota HOME acessada. Iniciando scan síncrono...")
+    
+    # Roda direto aqui para forçar o log aparecer no seu terminal
+    scan_network(db)
+    
     query = db.query(models.Dispositivo)
     
     if filtro == "online":
@@ -47,11 +52,27 @@ async def home(request: Request, filtro: str = None, db: Session = Depends(get_d
 from fastapi import Form
 
 @app.post("/salvar_apelido")
-async def salvar_apelido(mac: str = Form(...), apelido: str = Form(...), db: Session = Depends(get_db)):
-    dispositivo = db.query(models.Dispositivo).filter(models.Dispositivo.mac == mac).first()
-    if dispositivo:
-        dispositivo.apelido = apelido
-        db.commit()
+async def salvar_apelido(
+    mac: str = Form(...), 
+    apelido: str = Form(...), 
+    db: Session = Depends(get_db)
+):
+    print(f"[DEBUG] Tentando salvar apelido para MAC: {mac} -> {apelido}")
+    try:
+        # Busca o dispositivo no banco pelo MAC
+        dispositivo = db.query(models.Dispositivo).filter(models.Dispositivo.mac == mac).first()
+        
+        if dispositivo:
+            dispositivo.apelido = apelido
+            db.commit()
+            print(f"[SUCCESS] Apelido '{apelido}' salvo com sucesso!")
+        else:
+            print(f"[ERROR] Dispositivo com MAC {mac} não encontrado no banco.")
+            
+    except Exception as e:
+        print(f"[CRITICAL ERROR] Falha ao salvar no banco: {e}")
+        db.rollback() # Desfaz qualquer erro para não travar o banco
+        
     return RedirectResponse(url="/", status_code=303)
 
 # Rota futura para editar o apelido (exemplo de como o ORM facilita)
