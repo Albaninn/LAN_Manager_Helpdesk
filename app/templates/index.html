@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
-<head>
+<html lang="pt-br" data-bs-theme="light"> <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAN Manager - Helpdesk</title>
@@ -9,36 +8,35 @@
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     
     <style>
-        .status-up { color: #28a745; font-weight: bold; }          /* Verde */
-        .status-down { color: #dc3545; font-weight: bold; }        /* Vermelho */
-        .status-inacessivel { color: #fd7e14; font-weight: bold; } /* Laranja */
+        .status-up { color: #28a745; font-weight: bold; }
+        .status-down { color: #dc3545; font-weight: bold; }
+        .status-inacessivel { color: #fd7e14; font-weight: bold; }
         
-        .table-container { margin: 20px 0; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; padding: 15px; background: white; }
-        .badge-rede { font-size: 0.8em; }
-        .device-offline { opacity: 0.6; background-color: #f8f9fa; }
-        .dataTables_filter { margin-bottom: 15px; }
-        .btn-edit { transition: transform 0.2s; }
+        .table-container { margin: 20px 0; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; padding: 15px; background: var(--bs-body-bg); }
+        .device-offline { opacity: 0.6; }
+        
+        /* Estilo dos inputs de filtro */
+        thead input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #ccc; }
+        .btn-edit { transition: transform 0.2s; cursor: pointer; }
         .btn-edit:hover { transform: scale(1.2); color: #0d6efd; }
+        
+        /* Ajuste para o switch de tema */
+        .theme-switch { cursor: pointer; padding: 10px; border-radius: 50px; }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-body-tertiary">
 
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="mb-0">Gerenciador de Ativos de Rede</h1>
-            <p class="text-muted">Monitoramento e Inventário Local</p>
+            <h1 class="mb-0">Gerenciador de Ativos</h1>
+            <p class="text-muted">Monitoramento Local</p>
         </div>
-        <a href="/" class="btn btn-primary shadow-sm">🔄 Atualizar Scanner</a>
-    </div>
-
-    <div class="mb-3 card p-3 border-0 shadow-sm">
-        <div class="d-flex align-items-center">
-            <span class="text-muted me-3 fw-bold">Filtros Rápidos:</span>
-            <div class="btn-group">
-                <a href="/" class="btn btn-sm {{ 'btn-secondary' if not filtro_atual else 'btn-outline-secondary' }}">Todos ({{ dispositivos|length }})</a>
-                <a href="/?filtro=online" class="btn btn-sm {{ 'btn-success' if filtro_atual == 'online' else 'btn-outline-success' }}">● Online</a>
-                <a href="/?filtro=cadastrados" class="btn btn-sm {{ 'btn-primary' if filtro_atual == 'cadastrados' else 'btn-outline-primary' }}">📌 Com Apelido</a>
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-secondary btn-sm" id="btnTema">🌓</button>
+            <div class="btn-group shadow-sm">
+                <a href="/dashboard" class="btn btn-outline-primary">📊 Dashboard</a>
+                <a href="/" class="btn btn-primary">🔄 Scanner</a>
             </div>
         </div>
     </div>
@@ -48,8 +46,8 @@
             <thead class="table-dark">
                 <tr>
                     <th>IP</th>
-                    <th>Identificação (Apelido / Real)</th>
-                    <th>MAC Address</th>
+                    <th>Identificação</th>
+                    <th>MAC Address</th> <th>Categoria</th>
                     <th>Fabricante</th>
                     <th>Rede</th>
                     <th>Status</th>
@@ -58,43 +56,29 @@
             <tbody>
                 {% for disp in dispositivos %}
                 <tr class="{{ 'device-offline' if disp.status == 'down' else '' }}">
-                    <td><code>{{ disp.ip }}</code></td>
+                    <td><code class="fw-bold">{{ disp.ip }}</code></td>
                     
                     <td data-order="{{ '0_' + disp.apelido if disp.apelido else '1_' + disp.hostname_real }}">
                         <div class="d-flex align-items-center">
                             <div class="me-auto">
                                 {% if disp.apelido %}
                                     <strong class="text-primary text-uppercase">{{ disp.apelido }}</strong> <br>
-                                    <small class="text-muted">Host: {{ disp.hostname_real }}</small>
+                                    <small class="text-muted">{{ disp.hostname_real }}</small>
                                 {% else %}
-                                    <strong>{{ disp.hostname_real }}</strong> <br>
-                                    <small class="text-muted italic" style="font-size: 0.75rem;">Sem apelido definido</small>
+                                    <strong>{{ disp.hostname_real }}</strong>
                                 {% endif %}
                             </div>
-                            <button class="btn btn-edit btn-sm border-0" 
-                                    onclick="abrirEdicao('{{ disp.mac }}', '{{ disp.apelido or '' }}')"
-                                    title="Editar Apelido">
-                                ✏️
-                            </button>
+                            <span class="btn-edit ms-2" onclick="abrirEdicao('{{ disp.mac }}', '{{ disp.apelido or '' }}', '{{ disp.categoria or 'Outros' }}')">✏️</span>
                         </div>
                     </td>
 
-                    <td><small class="text-monospace">{{ disp.mac }}</small></td>
+                    <td><small class="text-monospace text-muted">{{ disp.mac }}</small></td>
+                    <td><span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ disp.categoria or 'Outros' }}</span></td>
                     <td><small>{{ disp.vendor }}</small></td>
-                    <td>
-                        <span class="badge {{ 'bg-info' if '85' in disp.rede_id else 'bg-warning text-dark' }} badge-rede">
-                            {{ disp.rede_id }}
-                        </span>
-                    </td>
+                    <td><span class="badge bg-info-subtle text-info-emphasis border">{{ disp.rede_id }}</span></td>
                     <td>
                         <span class="status-{{ disp.status }}">
-                            {% if disp.status == 'up' %}
-                                ● UP
-                            {% elif disp.status == 'down' %}
-                                ○ OFF
-                            {% else %}
-                                ⚠️ INACESSÍVEL
-                            {% endif %}
+                            {% if disp.status == 'up' %} ● UP {% elif disp.status == 'down' %} ○ OFF {% else %} ⚠️ INACESS {% endif %}
                         </span>
                     </td>
                 </tr>
@@ -108,19 +92,32 @@
     <div class="modal-dialog modal-dialog-centered">
         <form action="/salvar_apelido" method="post" class="modal-content shadow border-0">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">📌 Identificar Dispositivo</h5>
+                <h5 class="modal-title">📌 Gerenciar Ativo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body py-4">
                 <input type="hidden" name="mac" id="inputMac">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Apelido / Nome do Setor</label>
+                    <input type="text" name="apelido" id="inputApelido" class="form-control" placeholder="Ex: Rack Principal">
+                </div>
                 <div class="mb-0">
-                    <label for="inputApelido" class="form-label fw-bold">Apelido ou Nome do Setor</label>
-                    <input type="text" name="apelido" id="inputApelido" class="form-control form-control-lg" placeholder="Ex: Rack Principal, PC - João...">
+                    <label class="form-label fw-bold">Categoria (Tag)</label>
+                    <select name="categoria" id="inputCategoria" class="form-select">
+                        <option value="Outros">Outros</option>
+                        <option value="Notebook">Notebook</option>
+                        <option value="Desktop">Desktop</option>
+                        <option value="Servidor">Servidor</option>
+                        <option value="Impressora">Impressora</option>
+                        <option value="Switch/Router">Switch/Router</option>
+                        <option value="Câmera">Câmera</option>
+                        <option value="Celular">Celular</option>
+                    </select>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-link text-secondary decoration-none" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-success px-4 fw-bold">Salvar Alteração</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success px-4">Salvar</button>
             </div>
         </form>
     </div>
@@ -132,25 +129,59 @@
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
+    
 $(document).ready(function() {
-    $('#tabelaDispositivos').DataTable({
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
-        },
+    // --- 1. Gerenciamento de Tema com Memória (LocalStorage) ---
+    const htmlElement = $('html');
+    const btnTema = $('#btnTema');
+
+    // Verifica se já existe uma preferência salva, senão inicia no dark (já que você prefere)
+    const temaSalvo = localStorage.getItem('theme') || 'dark';
+    htmlElement.attr('data-bs-theme', temaSalvo);
+
+    btnTema.click(function() {
+        const currentTheme = htmlElement.attr('data-bs-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        htmlElement.attr('data-bs-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+
+    // --- 2. Injeção de filtros estilo Excel ---
+    // Clonamos o cabeçalho para criar a linha de filtros
+    $('#tabelaDispositivos thead tr').clone(true).addClass('filters').appendTo('#tabelaDispositivos thead');
+
+    var table = $('#tabelaDispositivos').DataTable({
+        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
         pageLength: 50,
-        // Ordenação por Identificação (0_ apelidos no topo) e Status
-        order: [[1, 'asc'], [5, 'desc']],
-        columnDefs: [
-            { targets: 1, type: 'string' }
-        ]
+        order: [[1, 'asc'], [6, 'desc']], 
+        orderCellsTop: true,
+        fixedHeader: true,
+        initComplete: function () {
+            var api = this.api();
+            api.columns().every(function (colIdx) {
+                var cell = $('.filters th').eq($(api.column(colIdx).header()).index());
+                
+                // Cria o input de busca para cada coluna
+                $(cell).html('<input type="text" class="form-control form-control-sm" placeholder="🔍 Filtrar..." />');
+                
+                // Evento para filtrar ao digitar
+                $('input', $('.filters th').eq($(api.column(colIdx).header()).index()))
+                    .on('keyup change', function () {
+                        if (api.column(colIdx).search() !== this.value) {
+                            api.column(colIdx).search(this.value).draw();
+                        }
+                    });
+            });
+        }
     });
 });
 
-function abrirEdicao(mac, apelido) {
+function abrirEdicao(mac, apelido, categoria) {
     document.getElementById('inputMac').value = mac;
     document.getElementById('inputApelido').value = apelido;
-    const myModal = new bootstrap.Modal(document.getElementById('modalEdicao'));
-    myModal.show();
+    document.getElementById('inputCategoria').value = categoria;
+    new bootstrap.Modal(document.getElementById('modalEdicao')).show();
 }
 </script>
 

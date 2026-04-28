@@ -27,11 +27,10 @@ def get_db():
         db.close()
 
 @app.get("/")
-async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)):
+async def home(request: Request, background_tasks: BackgroundTasks, filtro: str = None, db: Session = Depends(get_db)):
     print("[DEBUG] Rota HOME acessada. Iniciando scan síncrono...")
     
-    # Roda direto aqui para forçar o log aparecer no seu terminal
-    scan_network(db)
+    background_tasks.add_task(scan_network, db)
     
     query = db.query(models.Dispositivo)
     
@@ -55,15 +54,17 @@ from fastapi import Form
 async def salvar_apelido(
     mac: str = Form(...), 
     apelido: str = Form(...), 
+    categoria: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    print(f"[DEBUG] Tentando salvar apelido para MAC: {mac} -> {apelido}")
+    print(f"[DEBUG] Salvando Ativo: {mac} | Nome: {apelido} | Cat: {categoria}")
     try:
         # Busca o dispositivo no banco pelo MAC
         dispositivo = db.query(models.Dispositivo).filter(models.Dispositivo.mac == mac).first()
         
         if dispositivo:
             dispositivo.apelido = apelido
+            dispositivo.categoria = categoria
             db.commit()
             print(f"[SUCCESS] Apelido '{apelido}' salvo com sucesso!")
         else:
