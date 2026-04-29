@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-br" data-bs-theme="light"> <head>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAN Manager - Helpdesk</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     
     <style>
         .status-up { color: #28a745; font-weight: bold; }
@@ -15,13 +19,38 @@
         .table-container { margin: 20px 0; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; padding: 15px; background: var(--bs-body-bg); }
         .device-offline { opacity: 0.6; }
         
-        /* Estilo dos inputs de filtro */
         thead input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #ccc; }
         .btn-edit { transition: transform 0.2s; cursor: pointer; }
         .btn-edit:hover { transform: scale(1.2); color: #0d6efd; }
+
+        /* Estilo das Tags Coloridas */
+        .tag-pill {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-right: 3px;
+            display: inline-block;
+            text-transform: uppercase;
+        }
         
-        /* Ajuste para o switch de tema */
-        .theme-switch { cursor: pointer; padding: 10px; border-radius: 50px; }
+        /* Cores Fixas */
+        .tag-notebook { background-color: #0d6efd; color: white; }
+        .tag-desktop { background-color: #6c757d; color: white; }
+        .tag-servidor { background-color: #212529; color: white; }
+        .tag-impressora { background-color: #198754; color: white; }
+        .tag-switch { background-color: #0dcaf0; color: black; }
+        .tag-camera { background-color: #ffc107; color: black; }
+        .tag-ti { background-color: #6610f2; color: white; }
+        .tag-rh { background-color: #d63384; color: white; }
+        .tag-default { background-color: #444; color: #eee; }
+
+        /* Ajuste Select2 para Dark Mode */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection {
+            background-color: #2b3035;
+            color: #dee2e6;
+            border-color: #495057;
+        }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -30,10 +59,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="mb-0">Gerenciador de Ativos</h1>
-            <p class="text-muted">Monitoramento Local</p>
+            <p class="text-muted">Monitoramento Local e Inventário</p>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-outline-secondary btn-sm" id="btnTema">🌓</button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnTema" title="Trocar Tema">🌓</button>
             <div class="btn-group shadow-sm">
                 <a href="/dashboard" class="btn btn-outline-primary">📊 Dashboard</a>
                 <a href="/" class="btn btn-primary">🔄 Scanner</a>
@@ -47,7 +76,8 @@
                 <tr>
                     <th>IP</th>
                     <th>Identificação</th>
-                    <th>MAC Address</th> <th>Categoria</th>
+                    <th>MAC Address</th> 
+                    <th>Categorias</th>
                     <th>Fabricante</th>
                     <th>Rede</th>
                     <th>Status</th>
@@ -57,7 +87,6 @@
                 {% for disp in dispositivos %}
                 <tr class="{{ 'device-offline' if disp.status == 'down' else '' }}">
                     <td><code class="fw-bold">{{ disp.ip }}</code></td>
-                    
                     <td data-order="{{ '0_' + disp.apelido if disp.apelido else '1_' + disp.hostname_real }}">
                         <div class="d-flex align-items-center">
                             <div class="me-auto">
@@ -68,12 +97,19 @@
                                     <strong>{{ disp.hostname_real }}</strong>
                                 {% endif %}
                             </div>
-                            <span class="btn-edit ms-2" onclick="abrirEdicao('{{ disp.mac }}', '{{ disp.apelido or '' }}', '{{ disp.categoria or 'Outros' }}')">✏️</span>
+                            <span class="btn-edit ms-2" onclick="abrirEdicao('{{ disp.mac }}', '{{ disp.apelido or '' }}', '{{ disp.categoria or '' }}')">✏️</span>
                         </div>
                     </td>
-
                     <td><small class="text-monospace text-muted">{{ disp.mac }}</small></td>
-                    <td><span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ disp.categoria or 'Outros' }}</span></td>
+                    <td>
+                        {% if disp.categoria %}
+                            {% for tag in disp.categoria.split(',') %}
+                                <span class="tag-pill tag-{{ tag.lower().replace('/', '').replace(' ', '') }}">{{ tag }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="tag-pill tag-default">SEM TAG</span>
+                        {% endif %}
+                    </td>
                     <td><small>{{ disp.vendor }}</small></td>
                     <td><span class="badge bg-info-subtle text-info-emphasis border">{{ disp.rede_id }}</span></td>
                     <td>
@@ -99,25 +135,28 @@
                 <input type="hidden" name="mac" id="inputMac">
                 <div class="mb-3">
                     <label class="form-label fw-bold">Apelido / Nome do Setor</label>
-                    <input type="text" name="apelido" id="inputApelido" class="form-control" placeholder="Ex: Rack Principal">
+                    <input type="text" name="apelido" id="inputApelido" class="form-control" placeholder="Ex: Notebook - João">
                 </div>
                 <div class="mb-0">
-                    <label class="form-label fw-bold">Categoria (Tag)</label>
-                    <select name="categoria" id="inputCategoria" class="form-select">
-                        <option value="Outros">Outros</option>
+                    <label class="form-label fw-bold">Categorias (Selecione ou digite novas)</label>
+                    <select name="categorias" id="inputCategoria" class="form-select" multiple="multiple">
                         <option value="Notebook">Notebook</option>
                         <option value="Desktop">Desktop</option>
                         <option value="Servidor">Servidor</option>
                         <option value="Impressora">Impressora</option>
-                        <option value="Switch/Router">Switch/Router</option>
-                        <option value="Câmera">Câmera</option>
-                        <option value="Celular">Celular</option>
+                        <option value="Switch">Switch</option>
+                        <option value="Camera">Camera</option>
+                        <option value="TI">TI</option>
+                        <option value="ADM">ADM</option>
+                        <option value="RH">RH</option>
+                        <option value="SALES">SALES</option>
+                        <option value="DIRETOR">DIRETOR</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-success px-4">Salvar</button>
+                <button type="submit" class="btn btn-success px-4 fw-bold">Salvar Alterações</button>
             </div>
         </form>
     </div>
@@ -127,51 +166,46 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-    
 $(document).ready(function() {
-    // --- 1. Gerenciamento de Tema com Memória (LocalStorage) ---
+    // 1. Tema
     const htmlElement = $('html');
-    const btnTema = $('#btnTema');
-
-    // Verifica se já existe uma preferência salva, senão inicia no dark (já que você prefere)
     const temaSalvo = localStorage.getItem('theme') || 'dark';
     htmlElement.attr('data-bs-theme', temaSalvo);
 
-    btnTema.click(function() {
-        const currentTheme = htmlElement.attr('data-bs-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        
+    $('#btnTema').click(function() {
+        const newTheme = htmlElement.attr('data-bs-theme') === 'light' ? 'dark' : 'light';
         htmlElement.attr('data-bs-theme', newTheme);
         localStorage.setItem('theme', newTheme);
     });
 
-    // --- 2. Injeção de filtros estilo Excel ---
-    // Clonamos o cabeçalho para criar a linha de filtros
-    $('#tabelaDispositivos thead tr').clone(true).addClass('filters').appendTo('#tabelaDispositivos thead');
+    // 2. Select2 Dinâmico
+    $('#inputCategoria').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Selecione ou digite...',
+        tags: true, // PERMITE CRIAR TAGS NA HORA
+        tokenSeparators: [',', ' '],
+        dropdownParent: $('#modalEdicao')
+    });
 
+    // 3. DataTable
+    $('#tabelaDispositivos thead tr').clone(true).addClass('filters').appendTo('#tabelaDispositivos thead');
     var table = $('#tabelaDispositivos').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
         pageLength: 50,
-        order: [[1, 'asc'], [6, 'desc']], 
-        orderCellsTop: true,
-        fixedHeader: true,
+        order: [[1, 'asc'], [6, 'desc']],
         initComplete: function () {
             var api = this.api();
             api.columns().every(function (colIdx) {
                 var cell = $('.filters th').eq($(api.column(colIdx).header()).index());
-                
-                // Cria o input de busca para cada coluna
-                $(cell).html('<input type="text" class="form-control form-control-sm" placeholder="🔍 Filtrar..." />');
-                
-                // Evento para filtrar ao digitar
-                $('input', $('.filters th').eq($(api.column(colIdx).header()).index()))
-                    .on('keyup change', function () {
-                        if (api.column(colIdx).search() !== this.value) {
-                            api.column(colIdx).search(this.value).draw();
-                        }
-                    });
+                $(cell).html('<input type="text" class="form-control form-control-sm" placeholder="🔍" />');
+                $('input', cell).on('keyup change', function () {
+                    if (api.column(colIdx).search() !== this.value) {
+                        api.column(colIdx).search(this.value).draw();
+                    }
+                });
             });
         }
     });
@@ -180,10 +214,23 @@ $(document).ready(function() {
 function abrirEdicao(mac, apelido, categoria) {
     document.getElementById('inputMac').value = mac;
     document.getElementById('inputApelido').value = apelido;
-    document.getElementById('inputCategoria').value = categoria;
+    
+    const $select = $('#inputCategoria');
+    $select.val(null).trigger('change');
+
+    if (categoria) {
+        const tags = categoria.split(',');
+        tags.forEach(tag => {
+            if ($select.find("option[value='" + tag + "']").length === 0) {
+                const newOption = new Option(tag, tag, true, true);
+                $select.append(newOption);
+            }
+        });
+        $select.val(tags).trigger('change');
+    }
+    
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
 }
 </script>
-
 </body>
 </html>
