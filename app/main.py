@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+import json
 import os
 
 # Importações internas do seu projeto
@@ -89,35 +90,27 @@ async def atualizar_apelido(mac: str, novo_apelido: str, db: Session = Depends(g
 
 @app.get("/dashboard")
 async def dashboard(request: Request, db: Session = Depends(get_db)):
-    # 1. CONTAGEM REAL (Linhas únicas no banco)
-    # Isso evita que dispositivos com múltiplas tags inflem o total
-    total_real = db.query(models.Dispositivo).count()
-
-    # 2. Coleta de Status
-    stats_raw = db.query(models.Dispositivo.status, func.count(models.Dispositivo.mac)).group_by(models.Dispositivo.status).all()
-    stats_status = {str(k): int(v) for k, v in stats_raw}
+    dispositivos = db.query(models.Dispositivo).all()
+    lista_json = [
+        {
+            "ip": d.ip, "status": d.status, "mac": d.mac,
+            "categoria": d.categoria if d.categoria else "",
+            "vendor": d.vendor if d.vendor else "Desconhecido",
+            "rede_id": d.rede_id
+        } for d in dispositivos
+    ]
     
-    # 3. Coleta de Tags (Para o gráfico de pizza)
-    todos = db.query(models.Dispositivo.categoria).all()
-    tags_map = {}
-    for d in todos:
-        if d[0]:
-            for t in str(d[0]).split(','):
-                name = t.strip().upper()
-                if name: tags_map[name] = tags_map.get(name, 0) + 1
+    stats_status = {
+        "up": len([d for d in lista_json if d['status'] == 'up']),
+        "down": len([d for d in lista_json if d['status'] != 'up'])
+    }
 
-    # 4. Coleta de Fabricantes
-    vend_raw = db.query(models.Dispositivo.vendor, func.count(models.Dispositivo.mac)).group_by(models.Dispositivo.vendor).limit(5).all()
-    vendors_map = {str(k): int(v) for k, v in vend_raw}
-
-    # 5. RETORNO SEGURO (Mantendo a sintaxe que funcionou no Python 3.14)
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
         context={
-            "total_real": total_real,
+            "total_real": len(lista_json),
             "stats_status": stats_status,
-            "tags": tags_map,
-            "vendors": vendors_map
+            "dispositivos_json": json.dumps(lista_json)
         }
     )
