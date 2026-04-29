@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - LAN Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-radius: 12px; }
+        .stat-card { transition: transform 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); }
+    </style>
+</head>
+<body class="bg-body-tertiary">
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="mb-0">📊 Estatísticas da Rede</h1>
+            <p class="text-muted">Análise de ativos e saúde da infraestrutura</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Botão de Tema adicionado aqui -->
+            <button class="btn btn-outline-secondary btn-sm" id="btnTema" title="Trocar Tema">🌓</button>
+            <a href="/" class="btn btn-outline-primary px-4">⬅ Voltar para Lista</a>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card stat-card bg-primary text-white p-4">
+                <h3>Total de Ativos</h3>
+                <h2 class="display-4 fw-bold">{{ total_real }}</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card bg-success text-white p-4">
+                <h3>Online Agora</h3>
+                <h2 class="display-4 fw-bold">{{ stats_status.get('up', 0) }}</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card bg-danger text-white p-4">
+                <h3>Offline / Inacess.</h3>
+                <h2 class="display-4 fw-bold">{{ stats_status.get('down', 0) + stats_status.get('inacessivel', 0) }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card p-4 h-100">
+                <h4 class="mb-4">📦 Distribuição por Categorias</h4>
+                <canvas id="chartTags"></canvas>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-4 h-100">
+                <h4 class="mb-4">🏢 Top Fabricantes</h4>
+                <canvas id="chartVendors"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Gerenciamento de Tema (Sincronizado com a Index)
+    const htmlElement = document.documentElement;
+    const btnTema = document.getElementById('btnTema');
+
+    const aplicarTema = (tema) => {
+        htmlElement.setAttribute('data-bs-theme', tema);
+        localStorage.setItem('theme', tema);
+    };
+
+    const temaSalvo = localStorage.getItem('theme') || 'dark';
+    aplicarTema(temaSalvo);
+
+    btnTema.addEventListener('click', () => {
+        const novoTema = htmlElement.getAttribute('data-bs-theme') === 'light' ? 'dark' : 'light';
+        aplicarTema(novoTema);
+        // Recarregar para ajustar cores de texto dos gráficos
+        location.reload();
+    });
+
+    // 2. Dados do Python
+    const tagData = {{ tags | tojson | safe if tags else '{}' }};
+    const vendorData = {{ vendors | tojson | safe if vendors else '{}' }};
+    const statusData = {{ stats_status | tojson | safe if stats_status else '{}' }};
+
+    // Paleta de cores expandida para evitar repetições
+    const coresVibrantes = [
+        '#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', 
+        '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'
+    ];
+
+    const textoCor = temaSalvo === 'dark' ? '#dee2e6' : '#212529';
+
+    // 3. Gráfico de Tags (Pizza/Doughnut)
+    const ctxTags = document.getElementById('chartTags');
+    if (ctxTags && Object.keys(tagData).length > 0) {
+        new Chart(ctxTags, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(tagData),
+                datasets: [{
+                    data: Object.values(tagData),
+                    backgroundColor: coresVibrantes,
+                    borderWidth: 0
+                }]
+            },
+            options: { 
+                plugins: { 
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: textoCor }
+                    } 
+                } 
+            }
+        });
+    }
+
+    // 4. Gráfico de Fabricantes (Barras)
+    const ctxVendors = document.getElementById('chartVendors');
+    if (ctxVendors && Object.keys(vendorData).length > 0) {
+        new Chart(ctxVendors, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(vendorData),
+                datasets: [{
+                    label: 'Quantidade',
+                    data: Object.values(vendorData),
+                    backgroundColor: '#0d6efd',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: temaSalvo === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
+                        ticks: { color: textoCor }
+                    },
+                    x: {
+                        ticks: { color: textoCor }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+</script>
+</body>
+</html>

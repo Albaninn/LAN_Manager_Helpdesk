@@ -34,16 +34,29 @@
             text-transform: uppercase;
         }
         
-        /* Cores Fixas */
-        .tag-notebook { background-color: #0d6efd; color: white; }
-        .tag-desktop { background-color: #6c757d; color: white; }
-        .tag-servidor { background-color: #212529; color: white; }
-        .tag-impressora { background-color: #198754; color: white; }
-        .tag-switch { background-color: #0dcaf0; color: black; }
-        .tag-camera { background-color: #ffc107; color: black; }
-        .tag-ti { background-color: #6610f2; color: white; }
-        .tag-rh { background-color: #d63384; color: white; }
-        .tag-default { background-color: #444; color: #eee; }
+        /* Cores Únicas para Equipamentos */
+        .tag-notebook { background-color: #0d6efd; color: white; }    /* Azul */
+        .tag-desktop { background-color: #6c757d; color: white; }     /* Cinza */
+        .tag-servidor { background-color: #212529; color: white; }    /* Preto */
+        .tag-impressora { background-color: #198754; color: white; }  /* Verde */
+        .tag-switch { background-color: #0dcaf0; color: black; }      /* Ciano */
+        .tag-camera { background-color: #fd7e14; color: white; }      /* Laranja */
+
+        /* Cores Vibrantes para Setores (Diferentes dos Equipamentos) */
+        .tag-ti { background-color: #6610f2; color: white; }         /* Roxo */
+        .tag-adm { background-color: #20c997; color: white; }        /* Esmeralda */
+        .tag-rh { background-color: #d63384; color: white; }         /* Rosa */
+        .tag-sales { background-color: #e83e8c; color: white; }      /* Rosa Choque */
+        .tag-diretor { background-color: #dc3545; color: white; }    /* Vermelho */
+        .tag-trainee { background-color: #ffc107; color: black; }    /* Amarelo */
+        .tag-recrut { background-color: #52b1ff; color: black; }     /* Azul Céu */
+
+        /* Tag genérica para o que você criar na hora */
+        .tag-default { 
+            background-color: transparent; 
+            border: 1px solid var(--bs-secondary); 
+            color: var(--bs-emphasis-color); 
+        }
 
         /* Ajuste Select2 para Dark Mode */
         [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection {

@@ -2,8 +2,8 @@ from fastapi import FastAPI, Request, Depends, BackgroundTasks, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import os
 
 # Importações internas do seu projeto
@@ -18,6 +18,7 @@ app = FastAPI()
 
 # Configuração de templates
 templates = Jinja2Templates(directory="app/templates")
+templates.env.cache = None
 
 # Dependência para obter a sessão da base de dados
 def get_db():
@@ -88,28 +89,35 @@ async def atualizar_apelido(mac: str, novo_apelido: str, db: Session = Depends(g
 
 @app.get("/dashboard")
 async def dashboard(request: Request, db: Session = Depends(get_db)):
-    # 1. Estatísticas de Status (Online vs Offline)
-    stats_status = db.query(models.Dispositivo.status, func.count(models.Dispositivo.mac)) \
-                     .group_by(models.Dispositivo.status).all()
+    # 1. CONTAGEM REAL (Linhas únicas no banco)
+    # Isso evita que dispositivos com múltiplas tags inflem o total
+    total_real = db.query(models.Dispositivo).count()
+
+    # 2. Coleta de Status
+    stats_raw = db.query(models.Dispositivo.status, func.count(models.Dispositivo.mac)).group_by(models.Dispositivo.status).all()
+    stats_status = {str(k): int(v) for k, v in stats_raw}
     
-    # 2. Distribuição por Categorias (Tags)
-    # Como salvamos "Notebook,TI", precisamos processar isso
-    todos_dispositivos = db.query(models.Dispositivo.categoria).all()
-    contagem_tags = {}
-    for d in todos_dispositivos:
-        if d.categoria:
-            for tag in d.categoria.split(','):
-                tag = tag.strip().upper()
-                contagem_tags[tag] = contagem_tags.get(tag, 0) + 1
+    # 3. Coleta de Tags (Para o gráfico de pizza)
+    todos = db.query(models.Dispositivo.categoria).all()
+    tags_map = {}
+    for d in todos:
+        if d[0]:
+            for t in str(d[0]).split(','):
+                name = t.strip().upper()
+                if name: tags_map[name] = tags_map.get(name, 0) + 1
 
-    # 3. Top 5 Fabricantes
-    top_vendors = db.query(models.Dispositivo.vendor, func.count(models.Dispositivo.mac)) \
-                    .group_by(models.Dispositivo.vendor) \
-                    .order_by(func.count(models.Dispositivo.mac).desc()).limit(5).all()
+    # 4. Coleta de Fabricantes
+    vend_raw = db.query(models.Dispositivo.vendor, func.count(models.Dispositivo.mac)).group_by(models.Dispositivo.vendor).limit(5).all()
+    vendors_map = {str(k): int(v) for k, v in vend_raw}
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "stats_status": dict(stats_status),
-        "tags": contagem_tags,
-        "vendors": dict(top_vendors)
-    })
+    # 5. RETORNO SEGURO (Mantendo a sintaxe que funcionou no Python 3.14)
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "total_real": total_real,
+            "stats_status": stats_status,
+            "tags": tags_map,
+            "vendors": vendors_map
+        }
+    )
