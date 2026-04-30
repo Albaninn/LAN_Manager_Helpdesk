@@ -2,74 +2,59 @@
 <html lang="pt-br" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>BI Avançado - LAN Manager</title>
+    <title>BI Manager - Edição Dinâmica</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 20px; }
-        .chart-card { border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: var(--bs-body-bg); }
-        .btn-remove { position: absolute; top: 10px; right: 10px; z-index: 10; border-radius: 50%; width: 28px; height: 28px; padding: 0; }
-        .stat-card { border: none; border-radius: 10px; }
+        .chart-card { border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: var(--bs-body-bg); transition: box-shadow 0.3s; }
+        .chart-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+        .actions-overlay { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; }
+        .btn-action { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.8rem; }
     </style>
 </head>
 <body class="bg-body-tertiary">
 
 <div class="container-fluid py-4">
-    <!-- Cabeçalho Organizado: Título à Esquerda, Botões à Direita -->
     <div class="d-flex justify-content-between align-items-center mb-3 px-3">
         <div>
-            <h2 class="mb-0">📊 Business Intelligence</h2>
-            <p class="text-muted mb-0">Análise cruzada de ativos de rede</p>
+            <h2 class="mb-0">⚙️ Gestão de Ativos BI</h2>
+            <p class="text-muted mb-0">Personalize e edite seus cruzamentos de dados</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-success px-4 fw-bold" onclick="abrirModal()">+ Novo Gráfico</button>
+            <button class="btn btn-success px-4 fw-bold" onclick="abrirModalNovo()">+ Criar Gráfico</button>
             <button class="btn btn-outline-secondary" id="btnTema">🌓</button>
             <a href="/" class="btn btn-outline-primary">Voltar</a>
         </div>
     </div>
 
-    <!-- Cards abaixo do Título -->
+    <!-- Cards de Resumo -->
     <div class="row g-3 mb-4 px-3">
-        <div class="col-md-4">
-            <div class="card stat-card bg-primary text-white p-3 text-center">
-                <small class="text-uppercase opacity-75">Total de Ativos</small>
-                <h3 class="fw-bold mb-0">{{ total_real }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stat-card bg-success text-white p-3 text-center">
-                <small class="text-uppercase opacity-75">Online</small>
-                <h3 class="fw-bold mb-0">{{ stats_status.get('up', 0) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stat-card bg-danger text-white p-3 text-center">
-                <small class="text-uppercase opacity-75">Offline</small>
-                <h3 class="fw-bold mb-0">{{ stats_status.get('down', 0) }}</h3>
-            </div>
-        </div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-primary text-white border-0"><h6>Total</h6><h3>{{ total_real }}</h3></div></div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-success text-white border-0"><h6>Online</h6><h3>{{ stats_status.get('up', 0) }}</h3></div></div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-danger text-white border-0"><h6>Offline</h6><h3>{{ stats_status.get('down', 0) }}</h3></div></div>
     </div>
 
-    <!-- Área dos Gráficos Customizados -->
     <div id="dashboardGrid" class="grid-dashboard px-3"></div>
 </div>
 
-<!-- Modal Builder Avançado -->
+<!-- Modal Builder / Editor -->
 <div class="modal fade" id="modalBuilder" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Cruzamento de Dados</h5>
+                <h5 class="modal-title" id="modalTitulo">Configurar Gráfico</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="cfgId">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Título do Widget</label>
-                    <input type="text" id="cfgTitulo" class="form-control" placeholder="Ex: Saúde por Categoria">
+                    <label class="form-label fw-bold">Título</label>
+                    <input type="text" id="cfgTitulo" class="form-control">
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label fw-bold">Eixo X (Principal)</label>
+                        <label class="form-label fw-bold">Dado Base (Eixo X)</label>
                         <select id="cfgEixoX" class="form-select">
                             <option value="categoria">Categorias/Tags</option>
                             <option value="vendor">Fabricante</option>
@@ -78,24 +63,31 @@
                         </select>
                     </div>
                     <div class="col-6">
-                        <label class="form-label fw-bold">Cruzamento (Série)</label>
+                        <label class="form-label fw-bold">Cruzar com (Série)</label>
                         <select id="cfgCruzamento" class="form-select">
-                            <option value="none">Apenas Contagem Simples</option>
-                            <option value="status">Por Status (On/Off)</option>
-                            <option value="categoria">Por Tags Secundárias</option>
+                            <option value="none">Nenhum (Simples)</option>
+                            <option value="status">Status (Saúde)</option>
+                            <option value="categoria">Categorias</option>
+                            <option value="vendor">Fabricante</option>
                         </select>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Tipo de Visualização</label>
+                    <label class="form-label fw-bold">Visualização</label>
                     <select id="cfgTipo" class="form-select">
                         <option value="bar">Barras Empilhadas</option>
-                        <option value="doughnut">Pizza (Donut)</option>
+                        <option value="doughnut">Rosca (Donut)</option>
+                        <option value="pie">Pizza</option>
                     </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-danger">Remover do Gráfico (Blacklist)</label>
+                    <input type="text" id="cfgExcluir" class="form-control" placeholder="Ex: OUTROS, N/A, DESCONHECIDO">
+                    <small class="text-muted">Separe os nomes por vírgula para ocultá-los deste gráfico.</small>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary w-100 py-2 fw-bold" onclick="salvarNovoGrafico()">Gerar e Fixar Gráfico</button>
+                <button class="btn btn-primary w-100 fw-bold py-2" onclick="salvarGrafico()">Travar Alterações</button>
             </div>
         </div>
     </div>
@@ -104,114 +96,145 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const dadosBrutos = {{ dispositivos_json | safe }};
-    let configGraficos = JSON.parse(localStorage.getItem('bi_custom_v2')) || [];
+    let graficos = JSON.parse(localStorage.getItem('bi_v3_config')) || [];
     const modalInst = new bootstrap.Modal(document.getElementById('modalBuilder'));
 
-    function abrirModal() { modalInst.show(); }
+    function abrirModalNovo() {
+        document.getElementById('cfgId').value = '';
+        document.getElementById('cfgTitulo').value = '';
+        document.getElementById('cfgExcluir').value = '';
+        document.getElementById('modalTitulo').innerText = 'Criar Novo Gráfico';
+        modalInst.show();
+    }
+
+    function editarGrafico(id) {
+        const g = graficos.find(item => item.id === id);
+        if (!g) return;
+        document.getElementById('cfgId').value = g.id;
+        document.getElementById('cfgTitulo').value = g.titulo;
+        document.getElementById('cfgEixoX').value = g.eixoX;
+        document.getElementById('cfgCruzamento').value = g.cruzamento;
+        document.getElementById('cfgTipo').value = g.tipo;
+        document.getElementById('cfgExcluir').value = g.excluir || "";
+        document.getElementById('modalTitulo').innerText = 'Editar Gráfico';
+        modalInst.show();
+    }
 
     const stringToColor = (str, op = 1) => {
-        if(str === 'UP' || str === 'ONLINE') return `rgba(25, 135, 84, ${op})`;
-        if(str === 'DOWN' || str === 'OFFLINE') return `rgba(220, 53, 69, ${op})`;
+        const s = str.toUpperCase();
+        if(s === 'UP' || s === 'ONLINE') return `rgba(25, 135, 84, ${op})`;
+        if(s === 'DOWN' || s === 'OFFLINE') return `rgba(220, 53, 69, ${op})`;
         let hash = 0;
         for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
         return `hsla(${Math.abs(hash) % 360}, 65%, 50%, ${op})`;
     };
 
-    function processarDadosCruzados(eixoX, cruzamento) {
-        const labelsX = new Set();
-        const mapa = {}; // { Tag: { UP: 5, DOWN: 2 } }
+    function processarBI(eixoX, cruzamento, blacklist = "") {
+        const info = { labels: new Set(), dataset: {} };
+        const filtros = blacklist.split(',').map(f => f.trim().toUpperCase()).filter(f => f !== "");
 
         dadosBrutos.forEach(d => {
-            const valXRaw = d[eixoX] || 'N/A';
-            const partesX = eixoX === 'categoria' ? valXRaw.split(',') : [valXRaw];
+            const valsX = eixoX === 'categoria' ? (d[eixoX] || 'SEM TAG').split(',') : [d[eixoX] || 'N/A'];
+            valsX.forEach(rawX => {
+                const x = rawX.trim().toUpperCase();
+                
+                if (filtros.includes(x)) return; // FILTRO BLACKLIST EIXO X
 
-            partesX.forEach(pX => {
-                const x = pX.trim().toUpperCase() || 'SEM DADO';
-                labelsX.add(x);
-
-                if (!mapa[x]) mapa[x] = {};
+                info.labels.add(x);
+                if (!info.dataset[x]) info.dataset[x] = {};
 
                 if (cruzamento === 'none') {
-                    mapa[x]['TOTAL'] = (mapa[x]['TOTAL'] || 0) + 1;
+                    info.dataset[x]['TOTAL'] = (info.dataset[x]['TOTAL'] || 0) + 1;
                 } else {
-                    const valC = (d[cruzamento] || 'N/A').toString().toUpperCase();
-                    mapa[x][valC] = (mapa[x][valC] || 0) + 1;
+                    const valsC = cruzamento === 'categoria' ? (d[cruzamento] || 'SEM TAG').split(',') : [d[cruzamento] || 'N/A'];
+                    valsC.forEach(rawC => {
+                        const c = rawC.trim().toUpperCase();
+                        
+                        if (filtros.includes(c)) return; // FILTRO BLACKLIST CRUZAMENTO
+
+                        info.dataset[x][c] = (info.dataset[x][c] || 0) + 1;
+                    });
                 }
             });
         });
-
-        return { labels: Array.from(labelsX), dataset: mapa };
+        return { labels: Array.from(info.labels).sort(), dataset: info.dataset };
     }
 
-    function salvarNovoGrafico() {
-        const novo = {
-            id: Date.now(),
-            titulo: document.getElementById('cfgTitulo').value || 'Novo Insight',
+    function salvarGrafico() {
+        const id = document.getElementById('cfgId').value;
+        const novoObj = {
+            id: id ? parseInt(id) : Date.now(),
+            titulo: document.getElementById('cfgTitulo').value || 'Insight',
             eixoX: document.getElementById('cfgEixoX').value,
             cruzamento: document.getElementById('cfgCruzamento').value,
-            tipo: document.getElementById('cfgTipo').value
+            tipo: document.getElementById('cfgTipo').value,
+            excluir: document.getElementById('cfgExcluir').value || ""
         };
-        configGraficos.push(novo);
-        localStorage.setItem('bi_custom_v2', JSON.stringify(configGraficos));
+
+        if (id) {
+            const index = graficos.findIndex(g => g.id === parseInt(id));
+            graficos[index] = novoObj;
+        } else {
+            graficos.push(novoObj);
+        }
+
+        localStorage.setItem('bi_v3_config', JSON.stringify(graficos));
         modalInst.hide();
-        renderizarDashboard();
+        renderizar();
     }
 
-    function removerGrafico(id) {
-        configGraficos = configGraficos.filter(g => g.id !== id);
-        localStorage.setItem('bi_custom_v2', JSON.stringify(configGraficos));
-        renderizarDashboard();
+    function remover(id) {
+        graficos = graficos.filter(g => g.id !== id);
+        localStorage.setItem('bi_v3_config', JSON.stringify(graficos));
+        renderizar();
     }
 
-    function renderizarDashboard() {
+    function renderizar() {
         const grid = document.getElementById('dashboardGrid');
         grid.innerHTML = '';
-
-        configGraficos.forEach(config => {
+        graficos.forEach(config => {
             const card = document.createElement('div');
             card.className = 'card chart-card p-4 position-relative';
             card.innerHTML = `
-                <button class="btn btn-sm btn-outline-danger btn-remove" onclick="removerGrafico(${config.id})">×</button>
-                <h6 class="fw-bold text-uppercase mb-3">${config.titulo}</h6>
-                <div style="height: 320px;"><canvas id="canvas-${config.id}"></canvas></div>
+                <div class="actions-overlay">
+                    <button class="btn btn-sm btn-primary btn-action" onclick="editarGrafico(${config.id})">✎</button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="remover(${config.id})">×</button>
+                </div>
+                <h6 class="fw-bold text-center mb-3 text-uppercase">${config.titulo}</h6>
+                <div style="height: 320px;"><canvas id="c-${config.id}"></canvas></div>
             `;
             grid.appendChild(card);
 
-            const info = processarDadosCruzados(config.eixoX, config.cruzamento);
-            
-            // Montar datasets para o Chart.js
-            const chavesSéries = new Set();
-            info.labels.forEach(l => Object.keys(info.dataset[l]).forEach(s => chavesSéries.add(s)));
+            const res = processarBI(config.eixoX, config.cruzamento, config.excluir || "");
+            const series = new Set();
+            res.labels.forEach(l => Object.keys(res.dataset[l]).forEach(s => series.add(s)));
 
-            const datasets = Array.from(chavesSéries).map(serie => ({
-                label: serie,
-                data: info.labels.map(l => info.dataset[l][serie] || 0),
-                backgroundColor: stringToColor(serie),
-                borderRadius: config.tipo === 'bar' ? 5 : 0
+            const datasets = Array.from(series).map(sName => ({
+                label: sName,
+                data: res.labels.map(l => res.dataset[l][sName] || 0),
+                backgroundColor: stringToColor(sName),
+                borderWidth: 0
             }));
 
-            new Chart(document.getElementById(`canvas-${config.id}`), {
+            new Chart(document.getElementById(`c-${config.id}`), {
                 type: config.tipo,
-                data: { labels: info.labels, datasets: datasets },
+                data: { labels: res.labels, datasets: datasets },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: config.tipo === 'bar' ? { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } : {},
-                    plugins: { legend: { position: 'bottom' } }
+                    responsive: true, maintainAspectRatio: false,
+                    scales: config.tipo === 'bar' ? { x: { stacked: true }, y: { stacked: true } } : {},
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
                 }
             });
         });
     }
 
-    // Gerenciador de Tema
     document.getElementById('btnTema').addEventListener('click', () => {
-        const novo = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-bs-theme', novo);
-        localStorage.setItem('theme', novo);
+        const n = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-bs-theme', n);
+        localStorage.setItem('theme', n);
     });
     document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'dark');
-
-    renderizarDashboard();
+    renderizar();
 </script>
 </body>
 </html>
