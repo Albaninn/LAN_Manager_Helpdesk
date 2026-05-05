@@ -81,6 +81,11 @@
                     </select>
                 </div>
                 <div class="mb-3">
+                    <label class="form-label fw-bold text-success">Filtrar por (Somente estes)</label>
+                    <input type="text" id="cfgFiltrar" class="form-control" placeholder="Ex: NOTEBOOK, TI">
+                    <small class="text-muted">O gráfico mostrará APENAS dados que contenham estes termos.</small>
+                </div>
+                <div class="mb-3">
                     <label class="form-label fw-bold text-danger">Remover do Gráfico (Blacklist)</label>
                     <input type="text" id="cfgExcluir" class="form-control" placeholder="Ex: OUTROS, N/A, DESCONHECIDO">
                     <small class="text-muted">Separe os nomes por vírgula para ocultá-los deste gráfico.</small>
@@ -103,6 +108,7 @@
         document.getElementById('cfgId').value = '';
         document.getElementById('cfgTitulo').value = '';
         document.getElementById('cfgExcluir').value = '';
+        document.getElementById('cfgFiltrar').value = ''; // Novo campo
         document.getElementById('modalTitulo').innerText = 'Criar Novo Gráfico';
         modalInst.show();
     }
@@ -116,6 +122,7 @@
         document.getElementById('cfgCruzamento').value = g.cruzamento;
         document.getElementById('cfgTipo').value = g.tipo;
         document.getElementById('cfgExcluir').value = g.excluir || "";
+        document.getElementById('cfgFiltrar').value = g.filtrar || ""; // Novo campo
         document.getElementById('modalTitulo').innerText = 'Editar Gráfico';
         modalInst.show();
     }
@@ -129,32 +136,33 @@
         return `hsla(${Math.abs(hash) % 360}, 65%, 50%, ${op})`;
     };
 
-    function processarBI(eixoX, cruzamento, blacklist = "") {
+    function processarBI(eixoX, cruzamento, blacklist = "", whitelist = "") {
         const info = { labels: new Set(), dataset: {} };
-        const filtros = blacklist.split(',').map(f => f.trim().toUpperCase()).filter(f => f !== "");
+        
+        const negativos = blacklist.split(',').map(f => f.trim().toUpperCase()).filter(f => f !== "");
+        const positivos = whitelist.split(',').map(f => f.trim().toUpperCase()).filter(f => f !== "");
 
         dadosBrutos.forEach(d => {
             const valsX = eixoX === 'categoria' ? (d[eixoX] || 'SEM TAG').split(',') : [d[eixoX] || 'N/A'];
+            const valsC = cruzamento === 'none' ? ['TOTAL'] : (cruzamento === 'categoria' ? (d[cruzamento] || 'SEM TAG').split(',') : [d[cruzamento] || 'N/A']);
+
             valsX.forEach(rawX => {
                 const x = rawX.trim().toUpperCase();
                 
-                if (filtros.includes(x)) return; // FILTRO BLACKLIST EIXO X
+                valsC.forEach(rawC => {
+                    const c = rawC.trim().toUpperCase();
 
-                info.labels.add(x);
-                if (!info.dataset[x]) info.dataset[x] = {};
+                    // LÓGICA DE FILTRO:
+                    // 1. Se estiver na blacklist, pula.
+                    if (negativos.includes(x) || negativos.includes(c)) return;
 
-                if (cruzamento === 'none') {
-                    info.dataset[x]['TOTAL'] = (info.dataset[x]['TOTAL'] || 0) + 1;
-                } else {
-                    const valsC = cruzamento === 'categoria' ? (d[cruzamento] || 'SEM TAG').split(',') : [d[cruzamento] || 'N/A'];
-                    valsC.forEach(rawC => {
-                        const c = rawC.trim().toUpperCase();
-                        
-                        if (filtros.includes(c)) return; // FILTRO BLACKLIST CRUZAMENTO
+                    // 2. Se houver whitelist e nem o X nem o C estiverem neles, pula.
+                    if (positivos.length > 0 && !positivos.includes(x) && !positivos.includes(c)) return;
 
-                        info.dataset[x][c] = (info.dataset[x][c] || 0) + 1;
-                    });
-                }
+                    info.labels.add(x);
+                    if (!info.dataset[x]) info.dataset[x] = {};
+                    info.dataset[x][c] = (info.dataset[x][c] || 0) + 1;
+                });
             });
         });
         return { labels: Array.from(info.labels).sort(), dataset: info.dataset };
@@ -168,7 +176,8 @@
             eixoX: document.getElementById('cfgEixoX').value,
             cruzamento: document.getElementById('cfgCruzamento').value,
             tipo: document.getElementById('cfgTipo').value,
-            excluir: document.getElementById('cfgExcluir').value || ""
+            excluir: document.getElementById('cfgExcluir').value || "",
+            filtrar: document.getElementById('cfgFiltrar').value || "" // Salva o filtro positivo
         };
 
         if (id) {
