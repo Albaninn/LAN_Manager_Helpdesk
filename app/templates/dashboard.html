@@ -2,27 +2,29 @@
 <html lang="pt-br" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>BI Manager - Edição Dinâmica</title>
+    <title>BI Manager Pro - Seleção Inteligente</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 20px; }
-        .chart-card { border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: var(--bs-body-bg); transition: box-shadow 0.3s; }
-        .chart-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
-        .actions-overlay { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; }
-        .btn-action { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.8rem; }
+        .chart-card { border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: var(--bs-body-bg); position: relative; }
+        .actions-overlay { position: absolute; top: 15px; right: 15px; z-index: 10; display: flex; gap: 8px; }
+        .btn-action { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        /* Estilo para a lista de seleção */
+        .select-scroll { max-height: 150px; overflow-y: auto; border: 1px solid #444; border-radius: 5px; padding: 10px; background: #222; }
+        .form-check-label { font-size: 0.9rem; cursor: pointer; }
     </style>
 </head>
 <body class="bg-body-tertiary">
 
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3 px-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 px-3">
         <div>
-            <h2 class="mb-0">⚙️ Gestão de Ativos BI</h2>
-            <p class="text-muted mb-0">Personalize e edite seus cruzamentos de dados</p>
+            <h2 class="mb-0">⚙️ Painel de BI Pro</h2>
+            <p class="text-muted mb-0">Monte gráficos cruzados por seleção visual</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-success px-4 fw-bold" onclick="abrirModalNovo()">+ Criar Gráfico</button>
+            <button class="btn btn-success px-4 fw-bold" onclick="abrirModalNovo()">+ Novo Gráfico</button>
             <button class="btn btn-outline-secondary" id="btnTema">🌓</button>
             <a href="/" class="btn btn-outline-primary">Voltar</a>
         </div>
@@ -30,7 +32,7 @@
 
     <!-- Cards de Resumo -->
     <div class="row g-3 mb-4 px-3">
-        <div class="col-md-4"><div class="card p-3 text-center bg-primary text-white border-0"><h6>Total</h6><h3>{{ total_real }}</h3></div></div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-primary text-white border-0"><h6>Total Real</h6><h3>{{ total_real }}</h3></div></div>
         <div class="col-md-4"><div class="card p-3 text-center bg-success text-white border-0"><h6>Online</h6><h3>{{ stats_status.get('up', 0) }}</h3></div></div>
         <div class="col-md-4"><div class="card p-3 text-center bg-danger text-white border-0"><h6>Offline</h6><h3>{{ stats_status.get('down', 0) }}</h3></div></div>
     </div>
@@ -38,9 +40,9 @@
     <div id="dashboardGrid" class="grid-dashboard px-3"></div>
 </div>
 
-<!-- Modal Builder / Editor -->
+<!-- Modal Builder Inteligente -->
 <div class="modal fade" id="modalBuilder" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalTitulo">Configurar Gráfico</h5>
@@ -48,51 +50,54 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="cfgId">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Título</label>
-                    <input type="text" id="cfgTitulo" class="form-control">
-                </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-bold">Dado Base (Eixo X)</label>
-                        <select id="cfgEixoX" class="form-select">
-                            <option value="categoria">Categorias/Tags</option>
-                            <option value="vendor">Fabricante</option>
-                            <option value="status">Status</option>
-                            <option value="rede_id">Rede</option>
-                        </select>
+                <div class="row">
+                    <div class="col-md-6 border-end">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Título</label>
+                            <input type="text" id="cfgTitulo" class="form-control" placeholder="Ex: Notebooks por Setor">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de Visualização</label>
+                            <select id="cfgTipo" class="form-select">
+                                <option value="bar">Barras Empilhadas</option>
+                                <option value="doughnut">Donut</option>
+                                <option value="pie">Pizza</option>
+                            </select>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label fw-bold">Eixo X</label>
+                                <select id="cfgEixoX" class="form-select" onchange="atualizarOpcoesSelecao()">
+                                    <option value="categoria">Tags</option>
+                                    <option value="vendor">Fabricante</option>
+                                    <option value="status">Status</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold">Cruzamento</label>
+                                <select id="cfgCruzamento" class="form-select" onchange="atualizarOpcoesSelecao()">
+                                    <option value="none">Simples</option>
+                                    <option value="status">Status</option>
+                                    <option value="categoria">Tags</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold">Cruzar com (Série)</label>
-                        <select id="cfgCruzamento" class="form-select">
-                            <option value="none">Nenhum (Simples)</option>
-                            <option value="status">Status (Saúde)</option>
-                            <option value="categoria">Categorias</option>
-                            <option value="vendor">Fabricante</option>
-                        </select>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-info">Selecionar Itens para o Gráfico</label>
+                        <p class="small text-muted mb-2">Deixe vazio para mostrar tudo ou selecione o que deseja incluir:</p>
+                        <div id="listaSelecao" class="select-scroll">
+                            <!-- JS vai preencher as checkboxes aqui -->
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" id="cfgModoInverso">
+                            <label class="form-check-label text-danger">Modo Blacklist (Esconder selecionados)</label>
+                        </div>
                     </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Visualização</label>
-                    <select id="cfgTipo" class="form-select">
-                        <option value="bar">Barras Empilhadas</option>
-                        <option value="doughnut">Rosca (Donut)</option>
-                        <option value="pie">Pizza</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-success">Filtrar por (Somente estes)</label>
-                    <input type="text" id="cfgFiltrar" class="form-control" placeholder="Ex: NOTEBOOK, TI">
-                    <small class="text-muted">O gráfico mostrará APENAS dados que contenham estes termos.</small>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-danger">Remover do Gráfico (Blacklist)</label>
-                    <input type="text" id="cfgExcluir" class="form-control" placeholder="Ex: OUTROS, N/A, DESCONHECIDO">
-                    <small class="text-muted">Separe os nomes por vírgula para ocultá-los deste gráfico.</small>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary w-100 fw-bold py-2" onclick="salvarGrafico()">Travar Alterações</button>
+                <button class="btn btn-primary w-100 fw-bold py-2" onclick="salvarGrafico()">Fixar Alterações</button>
             </div>
         </div>
     </div>
@@ -101,15 +106,45 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const dadosBrutos = {{ dispositivos_json | safe }};
-    let graficos = JSON.parse(localStorage.getItem('bi_v3_config')) || [];
+    let graficos = JSON.parse(localStorage.getItem('bi_v4_config')) || [];
     const modalInst = new bootstrap.Modal(document.getElementById('modalBuilder'));
+
+    // 1. Descoberta Automática de Opções (Varre os dados reais)
+    function obterOpcoesUnicas() {
+        const opcoes = new Set();
+        const eixo = document.getElementById('cfgEixoX').value;
+        const cruz = document.getElementById('cfgCruzamento').value;
+
+        dadosBrutos.forEach(d => {
+            [eixo, cruz].forEach(chave => {
+                if (!chave || chave === 'none') return;
+                const valor = d[chave] || (chave === 'categoria' ? 'SEM TAG' : 'N/A');
+                valor.toString().split(',').forEach(v => opcoes.add(v.trim().toUpperCase()));
+            });
+        });
+        return Array.from(opcoes).sort();
+    }
+
+    function atualizarOpcoesSelecao(selecionadosAnteriormente = []) {
+        const container = document.getElementById('listaSelecao');
+        const opcoes = obterOpcoesUnicas();
+        container.innerHTML = '';
+
+        opcoes.forEach(op => {
+            const checked = selecionadosAnteriormente.includes(op) ? 'checked' : '';
+            container.innerHTML += `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${op}" id="chk-${op}" ${checked}>
+                    <label class="form-check-label" for="chk-${op}">${op}</label>
+                </div>`;
+        });
+    }
 
     function abrirModalNovo() {
         document.getElementById('cfgId').value = '';
         document.getElementById('cfgTitulo').value = '';
-        document.getElementById('cfgExcluir').value = '';
-        document.getElementById('cfgFiltrar').value = ''; // Novo campo
-        document.getElementById('modalTitulo').innerText = 'Criar Novo Gráfico';
+        document.getElementById('cfgModoInverso').checked = false;
+        atualizarOpcoesSelecao();
         modalInst.show();
     }
 
@@ -121,43 +156,56 @@
         document.getElementById('cfgEixoX').value = g.eixoX;
         document.getElementById('cfgCruzamento').value = g.cruzamento;
         document.getElementById('cfgTipo').value = g.tipo;
-        document.getElementById('cfgExcluir').value = g.excluir || "";
-        document.getElementById('cfgFiltrar').value = g.filtrar || ""; // Novo campo
-        document.getElementById('modalTitulo').innerText = 'Editar Gráfico';
+        document.getElementById('cfgModoInverso').checked = g.modoInverso || false;
+        atualizarOpcoesSelecao(g.itens || []);
         modalInst.show();
     }
 
-    const stringToColor = (str, op = 1) => {
-        const s = str.toUpperCase();
-        if(s === 'UP' || s === 'ONLINE') return `rgba(25, 135, 84, ${op})`;
-        if(s === 'DOWN' || s === 'OFFLINE') return `rgba(220, 53, 69, ${op})`;
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        return `hsla(${Math.abs(hash) % 360}, 65%, 50%, ${op})`;
-    };
-
-    function processarBI(eixoX, cruzamento, blacklist = "", whitelist = "") {
-        const info = { labels: new Set(), dataset: {} };
+    function salvarGrafico() {
+        const itens = Array.from(document.querySelectorAll('#listaSelecao input:checked')).map(cb => cb.value);
+        const id = document.getElementById('cfgId').value;
         
-        const negativos = blacklist.split(',').map(f => f.trim().toUpperCase()).filter(f => f !== "");
-        const positivos = whitelist.split(',').map(f => f.trim().toUpperCase()).filter(f => f !== "");
+        const novoObj = {
+            id: id ? parseInt(id) : Date.now(),
+            titulo: document.getElementById('cfgTitulo').value || 'Análise',
+            eixoX: document.getElementById('cfgEixoX').value,
+            cruzamento: document.getElementById('cfgCruzamento').value,
+            tipo: document.getElementById('cfgTipo').value,
+            itens: itens,
+            modoInverso: document.getElementById('cfgModoInverso').checked
+        };
+
+        if (id) {
+            const idx = graficos.findIndex(g => g.id === parseInt(id));
+            graficos[idx] = novoObj;
+        } else {
+            graficos.push(novoObj);
+        }
+
+        localStorage.setItem('bi_v4_config', JSON.stringify(graficos));
+        modalInst.hide();
+        renderizar();
+    }
+
+    function processarBI(config) {
+        const info = { labels: new Set(), dataset: {} };
+        const { eixoX, cruzamento, itens, modoInverso } = config;
 
         dadosBrutos.forEach(d => {
-            const valsX = eixoX === 'categoria' ? (d[eixoX] || 'SEM TAG').split(',') : [d[eixoX] || 'N/A'];
-            const valsC = cruzamento === 'none' ? ['TOTAL'] : (cruzamento === 'categoria' ? (d[cruzamento] || 'SEM TAG').split(',') : [d[cruzamento] || 'N/A']);
+            const vX = eixoX === 'categoria' ? (d[eixoX] || 'SEM TAG').split(',') : [d[eixoX] || 'N/A'];
+            const vC = cruzamento === 'none' ? ['TOTAL'] : (cruzamento === 'categoria' ? (d[cruzamento] || 'SEM TAG').split(',') : [d[cruzamento] || 'N/A']);
 
-            valsX.forEach(rawX => {
+            vX.forEach(rawX => {
                 const x = rawX.trim().toUpperCase();
-                
-                valsC.forEach(rawC => {
+                vC.forEach(rawC => {
                     const c = rawC.trim().toUpperCase();
 
-                    // LÓGICA DE FILTRO:
-                    // 1. Se estiver na blacklist, pula.
-                    if (negativos.includes(x) || negativos.includes(c)) return;
-
-                    // 2. Se houver whitelist e nem o X nem o C estiverem neles, pula.
-                    if (positivos.length > 0 && !positivos.includes(x) && !positivos.includes(c)) return;
+                    // LÓGICA DE FILTRO POR SELEÇÃO
+                    if (itens.length > 0) {
+                        const estaNaLista = itens.includes(x) || itens.includes(c);
+                        if (modoInverso && estaNaLista) return; // Esconde se estiver na lista
+                        if (!modoInverso && !estaNaLista) return; // Mostra apenas se estiver na lista
+                    }
 
                     info.labels.add(x);
                     if (!info.dataset[x]) info.dataset[x] = {};
@@ -168,80 +216,59 @@
         return { labels: Array.from(info.labels).sort(), dataset: info.dataset };
     }
 
-    function salvarGrafico() {
-        const id = document.getElementById('cfgId').value;
-        const novoObj = {
-            id: id ? parseInt(id) : Date.now(),
-            titulo: document.getElementById('cfgTitulo').value || 'Insight',
-            eixoX: document.getElementById('cfgEixoX').value,
-            cruzamento: document.getElementById('cfgCruzamento').value,
-            tipo: document.getElementById('cfgTipo').value,
-            excluir: document.getElementById('cfgExcluir').value || "",
-            filtrar: document.getElementById('cfgFiltrar').value || "" // Salva o filtro positivo
-        };
-
-        if (id) {
-            const index = graficos.findIndex(g => g.id === parseInt(id));
-            graficos[index] = novoObj;
-        } else {
-            graficos.push(novoObj);
-        }
-
-        localStorage.setItem('bi_v3_config', JSON.stringify(graficos));
-        modalInst.hide();
-        renderizar();
-    }
-
-    function remover(id) {
-        graficos = graficos.filter(g => g.id !== id);
-        localStorage.setItem('bi_v3_config', JSON.stringify(graficos));
-        renderizar();
-    }
+    // Funções de Estilo e Cores
+    const stringToColor = (s) => {
+        if(s === 'UP' || s === 'ONLINE') return '#198754';
+        if(s === 'DOWN' || s === 'OFFLINE') return '#dc3545';
+        let h = 0; for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+        return `hsl(${Math.abs(h) % 360}, 65%, 50%)`;
+    };
 
     function renderizar() {
         const grid = document.getElementById('dashboardGrid');
         grid.innerHTML = '';
-        graficos.forEach(config => {
+        graficos.forEach(conf => {
             const card = document.createElement('div');
-            card.className = 'card chart-card p-4 position-relative';
+            card.className = 'card chart-card p-4';
             card.innerHTML = `
                 <div class="actions-overlay">
-                    <button class="btn btn-sm btn-primary btn-action" onclick="editarGrafico(${config.id})">✎</button>
-                    <button class="btn btn-sm btn-danger btn-action" onclick="remover(${config.id})">×</button>
+                    <button class="btn btn-sm btn-primary btn-action" onclick="editarGrafico(${conf.id})">✎</button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="remover(${conf.id})">×</button>
                 </div>
-                <h6 class="fw-bold text-center mb-3 text-uppercase">${config.titulo}</h6>
-                <div style="height: 320px;"><canvas id="c-${config.id}"></canvas></div>
-            `;
+                <h6 class="fw-bold text-center mb-3 text-uppercase">${conf.titulo}</h6>
+                <div style="height: 320px;"><canvas id="c-${conf.id}"></canvas></div>`;
             grid.appendChild(card);
 
-            const res = processarBI(config.eixoX, config.cruzamento, config.excluir || "");
+            const res = processarBI(conf);
             const series = new Set();
             res.labels.forEach(l => Object.keys(res.dataset[l]).forEach(s => series.add(s)));
 
-            const datasets = Array.from(series).map(sName => ({
-                label: sName,
-                data: res.labels.map(l => res.dataset[l][sName] || 0),
-                backgroundColor: stringToColor(sName),
-                borderWidth: 0
-            }));
-
-            new Chart(document.getElementById(`c-${config.id}`), {
-                type: config.tipo,
-                data: { labels: res.labels, datasets: datasets },
+            new Chart(document.getElementById(`c-${conf.id}`), {
+                type: conf.tipo,
+                data: {
+                    labels: res.labels,
+                    datasets: Array.from(series).map(s => ({
+                        label: s,
+                        data: res.labels.map(l => res.dataset[l][s] || 0),
+                        backgroundColor: stringToColor(s)
+                    }))
+                },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: config.tipo === 'bar' ? { x: { stacked: true }, y: { stacked: true } } : {},
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                    scales: conf.tipo === 'bar' ? { x: { stacked: true }, y: { stacked: true } } : {}
                 }
             });
         });
     }
 
-    document.getElementById('btnTema').addEventListener('click', () => {
+    function remover(id) { graficos = graficos.filter(g => g.id !== id); localStorage.setItem('bi_v4_config', JSON.stringify(graficos)); renderizar(); }
+    
+    // Tema
+    document.getElementById('btnTema').onclick = () => {
         const n = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-bs-theme', n);
         localStorage.setItem('theme', n);
-    });
+    };
     document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'dark');
     renderizar();
 </script>
