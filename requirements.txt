@@ -5,3 +5,6 @@ jinja2
 python-dotenv
 python-multipart
 sqlalchemy
+scapy
+apscheduler
+pandas
