@@ -57,10 +57,36 @@
             color: var(--bs-emphasis-color); 
         }
 
+        /* --- CORREÇÃO 1: Cabeçalho Dinâmico conforme o Tema --- */
+        [data-bs-theme="light"] .custom-thead {
+            background-color: #f8f9fa !important;
+            color: #212529 !important;
+        }
+        [data-bs-theme="dark"] .custom-thead {
+            background-color: #212529 !important;
+            color: #f8f9fa !important;
+        }
+
+        /* --- CORREÇÃO 2: Ajustes Finos do Select2 para Dark Mode Extremo --- */
         [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection {
             background-color: #2b3035;
             color: #dee2e6;
             border-color: #495057;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+            background-color: #495057 !important; /* Cor de fundo das caixinhas selecionadas */
+            color: #ffffff !important;            /* Cor do texto interno das caixinhas */
+            border: 1px solid #6c757d !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection__choice__remove {
+            color: #ff8080 !important; /* Cor do botão X de remover a tag */
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown {
+            background-color: #2b3035 !important;
+            color: #dee2e6 !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+            background-color: #0d6efd !important; /* Cor ao passar o mouse por cima na lista */
         }
     </style>
 </head>
@@ -91,7 +117,7 @@
 
     <div class="table-container">
         <table id="tabelaDispositivos" class="table table-hover align-middle mb-0" style="width:100%">
-            <thead class="table-dark">
+            <thead class="custom-thead">
                 <tr>
                     <th>IP</th>
                     <th>Identificação</th>
@@ -262,7 +288,6 @@ function abrirEdicao(mac, apelido, categoria) {
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
 }
 
-// NOVO: Funções auxiliares para lidar com o envio assíncrono da importação
 function dispararImportacao() {
     document.getElementById('inputFileBackup').click();
 }
@@ -274,7 +299,6 @@ function processarImportacao(input) {
     const formData = new FormData();
     formData.append("file", arquivo);
     
-    // Faz o envio via AJAX para o FastAPI sem tirar o usuário da tela
     fetch("/backup/importar", {
         method: "POST",
         body: formData
@@ -283,7 +307,7 @@ function processarImportacao(input) {
     .then(data => {
         if (data.status === "sucesso") {
             alert("✅ Backup importado! " + data.message);
-            window.location.reload(); // Recarrega para exibir os novos apelidos na tabela
+            window.location.reload();
         } else {
             alert("❌ Erro no arquivo: " + data.message);
         }
