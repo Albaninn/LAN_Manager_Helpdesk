@@ -3,7 +3,6 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
@@ -13,27 +12,22 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime
 
-# Importações internas do seu projeto
 from .database import SessionLocal, engine
 from . import models
 from .scanner import scan_network
 
-# --- CONFIGURAÇÃO DE LOGS ---
 logging.basicConfig(
     filename='scanner_rede.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Cria as tabelas na base de dados (database.db) se não existirem
 models.Base.metadata.create_all(bind=engine)
 
-# --- TAREFA AGENDADA (SCANNER AUTOMÁTICO) ---
 def tarefa_scan_automatico():
-    """Executa a varredura sem travar o app a cada 5 minutos"""
     db = SessionLocal()
     try:
-        logging.info("🕒 Automação: Iniciando varredura agendada...")
+        logging.info("🕒 Automação: Varredura de 5 minutos iniciada...")
         scan_network(db)
         logging.info("✅ Automação: Varredura concluída com sucesso.")
     except Exception as e:
@@ -41,31 +35,24 @@ def tarefa_scan_automatico():
     finally:
         db.close()
 
-# --- GERENCIADOR DE CICLO DE VIDA (LIFESPAN) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Inicia o agendador ao ligar o servidor
     scheduler = BackgroundScheduler()
     scheduler.add_job(tarefa_scan_automatico, 'interval', minutes=5)
     scheduler.start()
-    logging.info("🚀 Servidor e Agendador (5min) iniciados.")
+    logging.info("🚀 Servidor e Agendador de Inventário Iniciados.")
     yield
-    # Desliga ao encerrar o servidor
     scheduler.shutdown()
     logging.info("🛑 Servidor e Agendador desligados.")
 
-# Inicialização do App
 app = FastAPI(lifespan=lifespan)
 
-# Permite servir arquivos locais da pasta app/static (se ela existir)
 if os.path.exists("app/static"):
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Configuração de templates
 templates = Jinja2Templates(directory="app/templates")
 templates.env.cache = None
 
-# Dependência para obter a sessão da base de dados
 def get_db():
     db = SessionLocal()
     try:
@@ -73,85 +60,67 @@ def get_db():
     finally:
         db.close()
 
-# --- ROTAS DE NAVEGAÇÃO E SCAN ---
-
 @app.get("/")
-async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)): # background_tasks: BackgroundTasks, 
-    print("[DEBUG] Rota HOME acessada. Iniciando scan síncrono...")
-    
-    '''background_tasks.add_task(scan_network, db)'''
-    
+async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)):
     query = db.query(models.Dispositivo)
-    
     if filtro == "online":
         query = query.filter(models.Dispositivo.status == "up")
     elif filtro == "cadastrados":
-        # Filtra apenas os que possuem apelido preenchido
         query = query.filter(models.Dispositivo.apelido != None)
     
     dispositivos = query.order_by(models.Dispositivo.ip).all()
-    
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={"dispositivos": dispositivos, "filtro_atual": filtro}
-    )
+    return templates.TemplateResponse(request=request, name="index.html", context={"dispositivos": dispositivos, "filtro_atual": filtro})
 
 @app.get("/scan_manual")
 async def scan_manual(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    logging.info("⚡ Scan Manual solicitado pelo usuário através da interface.")
+    logging.info("⚡ Scan Manual solicitado via interface.")
     background_tasks.add_task(scan_network, db)
     return RedirectResponse(url="/", status_code=303)
-
-# --- ROTAS DE GERENCIAMENTO ---
 
 @app.post("/salvar_apelido")
 async def salvar_apelido(
     mac: str = Form(...), 
     apelido: str = Form(...), 
-    categorias: list[str] = Form(...),
+    area: str = Form(None),
+    time: str = Form(None),
+    tipo: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    print(f"[DEBUG] Salvando Ativo: {mac} | Nome: {apelido} | Cat: {categorias}")
     try:
-        # Busca o dispositivo no banco pelo MAC
         dispositivo = db.query(models.Dispositivo).filter(models.Dispositivo.mac == mac).first()
-        
         if dispositivo:
             dispositivo.apelido = apelido
-            dispositivo.categoria = ",".join(categorias)
+            dispositivo.area = area.strip().upper() if area else "N/A"
+            dispositivo.time = time.strip().upper() if time else "N/A"
+            dispositivo.tipo = tipo.strip().upper() if tipo else "N/A"
             db.commit()
-            logging.info(f"💾 Salvo: {mac} como '{apelido}'")
-            print(f"[SUCCESS] Apelido '{apelido}' salvo com sucesso!")
-        else:
-            print(f"[ERROR] Dispositivo com MAC {mac} não encontrado no banco.")
-            
+            logging.info(f"💾 Salvo Ativo {mac}: Área={area} | Time={time} | Tipo={tipo}")
     except Exception as e:
         logging.error(f"❌ Erro ao salvar apelido: {e}")
-        print(f"[CRITICAL ERROR] Falha ao salvar no banco: {e}")
-        db.rollback() # Desfaz qualquer erro para não travar o banco
-        
+        db.rollback()
     return RedirectResponse(url="/", status_code=303)
 
 @app.post("/atualizar_apelido/{mac}")
 async def atualizar_apelido(
     mac: str, 
     novo_apelido: str = Form(...), 
-    novas_categorias: list[str] = Form(...), 
+    nova_area: str = Form(None), 
+    novo_time: str = Form(None),
+    novo_tipo: str = Form(None), 
     db: Session = Depends(get_db)
 ):
     dispositivo = db.query(models.Dispositivo).filter(models.Dispositivo.mac == mac).first()
     if dispositivo:
         try:
             dispositivo.apelido = novo_apelido
-            dispositivo.categoria = ",".join(novas_categorias)
+            dispositivo.area = nova_area.strip().upper() if nova_area else "N/A"
+            dispositivo.time = novo_time.strip().upper() if novo_time else "N/A"
+            dispositivo.tipo = novo_tipo.strip().upper() if novo_tipo else "N/A"
             db.commit()
-            logging.info(f"✏️ Editado: {mac} agora é '{novo_apelido}'")
+            logging.info(f"✏️ Atualizado {mac}: Área={nova_area} | Time={novo_time} | Tipo={novo_tipo}")
         except Exception as e:
             db.rollback()
             logging.error(f"❌ Erro ao editar {mac}: {e}")
-            
-    # Redireciona de volta para a Home para você ver a mudança
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/dashboard")
@@ -160,48 +129,33 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     lista_json = [
         {
             "ip": d.ip, "status": d.status, "mac": d.mac,
-            "categoria": d.categoria if d.categoria else "",
+            "area": d.area if d.area else "N/A",
+            "time": d.time if d.time else "N/A",
+            "tipo": d.tipo if d.tipo else "N/A",
             "vendor": d.vendor if d.vendor else "Desconhecido",
             "rede_id": d.rede_id
         } for d in dispositivos
     ]
-    
     stats_status = {
         "up": len([d for d in lista_json if d['status'] == 'up']),
         "down": len([d for d in lista_json if d['status'] != 'up'])
     }
-
-    return templates.TemplateResponse(
-        request=request,
-        name="dashboard.html",
-        context={
-            "total_real": len(lista_json),
-            "stats_status": stats_status,
-            "dispositivos_json": json.dumps(lista_json)
-        }
-    )
-
-# --- NOVAS ROTAS DE BACKUP E LOGS ---
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={
+        "total_real": len(lista_json), "stats_status": stats_status, "dispositivos_json": json.dumps(lista_json)
+    })
 
 @app.get("/backup/exportar")
 async def exportar_dados(db: Session = Depends(get_db)):
     dispositivos = db.query(models.Dispositivo).all()
     dados = [{
-        "MAC": d.mac,
-        "IP": d.ip,
-        "APELIDO": d.apelido,
-        "CATEGORIA": d.categoria,
-        "VENDOR": d.vendor
+        "MAC": d.mac, "IP": d.ip, "APELIDO": d.apelido,
+        "AREA": d.area, "TIME": d.time, "TIPO": d.tipo, "VENDOR": d.vendor
     } for d in dispositivos]
     
     df = pd.DataFrame(dados)
     stream = BytesIO()
-    # Exporta com ponto e vírgula e encoding para Excel
     df.to_csv(stream, index=False, encoding='utf-8-sig', sep=';')
-    
-    headers = {
-        'Content-Disposition': f'attachment; filename="backup_lan_{datetime.now().strftime("%Y%m%d")}.csv"'
-    }
+    headers = {'Content-Disposition': f'attachment; filename="backup_lan_{datetime.now().strftime("%Y%m%d")}.csv"'}
     return StreamingResponse(BytesIO(stream.getvalue()), media_type="text/csv", headers=headers)
 
 @app.post("/backup/importar")
@@ -209,29 +163,28 @@ async def importar_dados(file: UploadFile = File(...), db: Session = Depends(get
     try:
         contents = await file.read()
         df = pd.read_csv(BytesIO(contents), sep=';')
-        
         if df.empty or 'MAC' not in df.columns:
-             return {"status": "erro", "message": "Arquivo inválido ou coluna MAC ausente."}
+             return {"status": "erro", "message": "Arquivo ou colunas inválidas."}
 
         atualizados = 0
         for _, row in df.iterrows():
             disp = db.query(models.Dispositivo).filter(models.Dispositivo.mac == row['MAC']).first()
             if disp:
                 if pd.notna(row['APELIDO']): disp.apelido = row['APELIDO']
-                if pd.notna(row['CATEGORIA']): disp.categoria = row['CATEGORIA']
+                if 'AREA' in df.columns and pd.notna(row['AREA']): disp.area = str(row['AREA']).upper()
+                if 'TIME' in df.columns and pd.notna(row['TIME']): disp.time = str(row['TIME']).upper()
+                if 'TIPO' in df.columns and pd.notna(row['TIPO']): disp.tipo = str(row['TIPO']).upper()
                 atualizados += 1
-        
         db.commit()
-        logging.info(f"📥 Importação: {atualizados} dispositivos sincronizados via backup.")
-        return {"status": "sucesso", "message": f"{atualizados} dispositivos sincronizados."}
+        logging.info(f"📥 Importação Completa: {atualizados} ativos sincronizados via CSV.")
+        return {"status": "sucesso", "message": f"{atualizados} ativos sincronizados."}
     except Exception as e:
-        logging.error(f"❌ Falha na importação de backup: {e}")
+        logging.error(f"❌ Falha crítica ao importar backup: {e}")
         return {"status": "erro", "message": str(e)}
 
 @app.get("/logs/visualizar")
 async def visualizar_logs():
     if not os.path.exists('scanner_rede.log'):
-        return {"message": "Sem logs gerados até o momento."}
+        return {"message": "Nenhum log gerado."}
     with open('scanner_rede.log', 'r', encoding='utf-8', errors='replace') as f:
-        # Retorna as últimas 100 linhas para não sobrecarregar o JSON
         return {"historico": f.readlines()[-100:]}

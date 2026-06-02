@@ -4,90 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAN Manager - Helpdesk</title>
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
-    
     <style>
         .status-up { color: #28a745; font-weight: bold; }
         .status-down { color: #dc3545; font-weight: bold; }
-        .status-inacessivel { color: #fd7e14; font-weight: bold; }
-        
         .table-container { margin: 20px 0; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; padding: 15px; background: var(--bs-body-bg); }
         .device-offline { opacity: 0.6; }
-        
         thead input { width: 100%; padding: 4px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #ccc; }
         .btn-edit { transition: transform 0.2s; cursor: pointer; }
         .btn-edit:hover { transform: scale(1.2); color: #0d6efd; }
-
-        /* Estilo das Tags Coloridas */
-        .tag-pill {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            margin-right: 3px;
-            display: inline-block;
-            text-transform: uppercase;
-        }
-        
-        /* Cores Únicas para Equipamentos */
-        .tag-notebook { background-color: #0d6efd; color: white; }    /* Azul */
-        .tag-desktop { background-color: #6c757d; color: white; }     /* Cinza */
-        .tag-servidor { background-color: #212529; color: white; }    /* Preto */
-        .tag-impressora { background-color: #198754; color: white; }  /* Verde */
-        .tag-switch { background-color: #0dcaf0; color: black; }      /* Ciano */
-        .tag-camera { background-color: #fd7e14; color: white; }      /* Laranja */
-
-        /* Cores Vibrantes para Setores */
-        .tag-ti { background-color: #6610f2; color: white; }         /* Roxo */
-        .tag-adm { background-color: #20c997; color: white; }        /* Esmeralda */
-        .tag-rh { background-color: #d63384; color: white; }         /* Rosa */
-        .tag-sales { background-color: #e83e8c; color: white; }      /* Rosa Choque */
-        .tag-diretor { background-color: #dc3545; color: white; }    /* Vermelho */
-        .tag-trainee { background-color: #ffc107; color: black; }    /* Amarelo */
-        .tag-recrut { background-color: #52b1ff; color: black; }     /* Azul Céu */
-
-        .tag-default { 
-            background-color: transparent; 
-            border: 1px solid var(--bs-secondary); 
-            color: var(--bs-emphasis-color); 
-        }
-
-        /* --- CORREÇÃO 1: Cabeçalho Dinâmico conforme o Tema --- */
-        [data-bs-theme="light"] .custom-thead {
-            background-color: #f8f9fa !important;
-            color: #212529 !important;
-        }
-        [data-bs-theme="dark"] .custom-thead {
-            background-color: #212529 !important;
-            color: #f8f9fa !important;
-        }
-
-        /* --- CORREÇÃO 2: Ajustes Finos do Select2 para Dark Mode Extremo --- */
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection {
-            background-color: #2b3035;
-            color: #dee2e6;
-            border-color: #495057;
-        }
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
-            background-color: #495057 !important; /* Cor de fundo das caixinhas selecionadas */
-            color: #ffffff !important;            /* Cor do texto interno das caixinhas */
-            border: 1px solid #6c757d !important;
-        }
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection__choice__remove {
-            color: #ff8080 !important; /* Cor do botão X de remover a tag */
-        }
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown {
-            background-color: #2b3035 !important;
-            color: #dee2e6 !important;
-        }
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
-            background-color: #0d6efd !important; /* Cor ao passar o mouse por cima na lista */
-        }
+        .tag-pill { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; display: inline-block; }
+        .tag-area { background-color: #6610f2; color: white; } /* Roxo para Áreas */
+        .tag-time { background-color: #20c997; color: white; } /* Verde-água para Times */
+        .tag-tipo { background-color: #0d6efd; color: white; } /* Azul para Tipos */
+        [data-bs-theme="light"] .custom-thead { background-color: #f8f9fa !important; color: #212529 !important; }
+        [data-bs-theme="dark"] .custom-thead { background-color: #212529 !important; color: #f8f9fa !important; }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection { background-color: #2b3035; color: #dee2e6; border-color: #495057; }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -98,19 +33,15 @@
             <h1 class="mb-0">Gerenciador de Ativos</h1>
             <p class="text-muted mb-0">Monitoramento Local e Inventário</p>
         </div>
-        
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary" id="btnTema" title="Trocar Tema">🌓</button>
+            <button class="btn btn-outline-secondary" id="btnTema">🌓</button>
             <div class="btn-group shadow-sm">
                 <a href="/dashboard" class="btn btn-outline-primary">📊 Dashboard</a>
                 <a href="/scan_manual" class="btn btn-primary">🔄 Scan Manual</a>
             </div>
-            
             <a href="/backup/exportar" class="btn btn-outline-info">📥 Exportar CSV</a>
-            
             <button class="btn btn-outline-success" onclick="dispararImportacao()">📤 Importar CSV</button>
             <input type="file" id="inputFileBackup" accept=".csv" style="display: none;" onchange="processarImportacao(this)">
-            
             <a href="/logs/visualizar" target="_blank" class="btn btn-outline-secondary">📜 Logs</a>
         </div>
     </div>
@@ -122,7 +53,9 @@
                     <th>IP</th>
                     <th>Identificação</th>
                     <th>MAC Address</th> 
-                    <th>Categorias</th>
+                    <th>Área (Setor)</th>
+                    <th>Time (Equipe)</th>
+                    <th>Tipo (Hardware)</th>
                     <th>Fabricante</th>
                     <th>Rede</th>
                     <th>Status</th>
@@ -142,24 +75,18 @@
                                     <strong>{{ disp.hostname_real }}</strong>
                                 {% endif %}
                             </div>
-                            <span class="btn-edit ms-2" onclick="abrirEdicao('{{ disp.mac }}', '{{ disp.apelido or '' }}', '{{ disp.categoria or '' }}')">✏️</span>
+                            <span class="btn-edit ms-2" onclick="abrirEdicao('{{ disp.mac }}', '{{ disp.apelido or '' }}', '{{ disp.area or '' }}', '{{ disp.time or '' }}', '{{ disp.tipo or '' }}')">✏️</span>
                         </div>
                     </td>
                     <td><small class="text-monospace text-muted">{{ disp.mac }}</small></td>
-                    <td>
-                        {% if disp.categoria %}
-                            {% for tag in disp.categoria.split(',') %}
-                                <span class="tag-pill tag-{{ tag.lower().replace('/', '').replace(' ', '') }}">{{ tag }}</span>
-                            {% endfor %}
-                        {% else %}
-                            <span class="tag-pill tag-default">SEM TAG</span>
-                        {% endif %}
-                    </td>
+                    <td><span class="tag-pill tag-area">{{ disp.area or 'N/A' }}</span></td>
+                    <td><span class="tag-pill tag-time">{{ disp.time or 'N/A' }}</span></td>
+                    <td><span class="tag-pill tag-tipo">{{ disp.tipo or 'N/A' }}</span></td>
                     <td><small>{{ disp.vendor }}</small></td>
                     <td><span class="badge bg-info-subtle text-info-emphasis border">{{ disp.rede_id }}</span></td>
                     <td>
                         <span class="status-{{ disp.status }}">
-                            {% if disp.status == 'up' %} ● UP {% elif disp.status == 'down' %} ○ OFF {% else %} ⚠️ INACESS {% endif %}
+                            {% if disp.status == 'up' %} ● UP {% else %} ○ OFF {% endif %}
                         </span>
                     </td>
                 </tr>
@@ -179,23 +106,37 @@
             <div class="modal-body py-4">
                 <input type="hidden" name="mac" id="inputMac">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Apelido / Nome do Setor</label>
-                    <input type="text" name="novo_apelido" id="inputApelido" class="form-control" placeholder="Ex: Notebook - João">
+                    <label class="form-label fw-bold">Apelido / Usuário</label>
+                    <input type="text" name="apelido" id="inputApelido" class="form-control" placeholder="Ex: Notebook - João">
                 </div>
-                <div class="mb-0">
-                    <label class="form-label fw-bold">Categorias (Selecione ou digite novas)</label>
-                    <select name="novas_categorias" id="inputCategoria" class="form-select" multiple="multiple">
-                        <option value="Notebook">Notebook</option>
-                        <option value="Desktop">Desktop</option>
-                        <option value="Servidor">Servidor</option>
-                        <option value="Impressora">Impressora</option>
-                        <option value="Switch">Switch</option>
-                        <option value="Camera">Camera</option>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Área / Setor</label>
+                    <select name="area" id="inputArea" class="form-select">
                         <option value="TI">TI</option>
                         <option value="ADM">ADM</option>
                         <option value="RH">RH</option>
                         <option value="SALES">SALES</option>
-                        <option value="DIRETOR">DIRETOR</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Time / Subárea</label>
+                    <select name="time" id="inputTime" class="form-select">
+                        <option value="SUPORTE">Suporte</option>
+                        <option value="INFRA">Infra</option>
+                        <option value="FINANCEIRO">Financeiro</option>
+                        <option value="RECRUTAMENTO">Recrutamento</option>
+                        <option value="COMERCIAL">Comercial</option>
+                    </select>
+                </div>
+                <div class="mb-0">
+                    <label class="form-label fw-bold">Tipo de Equipamento</label>
+                    <select name="tipo" id="inputTipo" class="form-select">
+                        <option value="NOTEBOOK">Notebook</option>
+                        <option value="DESKTOP">Desktop</option>
+                        <option value="SERVIDOR">Servidor</option>
+                        <option value="IMPRESSORA">Impressora</option>
+                        <option value="SWITCH">Switch</option>
+                        <option value="CAMERA">Camera</option>
                     </select>
                 </div>
             </div>
@@ -215,10 +156,8 @@
 
 <script>
 $(document).ready(function() {
-    // 1. Tema
     const htmlElement = $('html');
-    const temaSalvo = localStorage.getItem('theme') || 'dark';
-    htmlElement.attr('data-bs-theme', temaSalvo);
+    htmlElement.attr('data-bs-theme', localStorage.getItem('theme') || 'dark');
 
     $('#btnTema').click(function() {
         const newTheme = htmlElement.attr('data-bs-theme') === 'light' ? 'dark' : 'light';
@@ -226,21 +165,18 @@ $(document).ready(function() {
         localStorage.setItem('theme', newTheme);
     });
 
-    // 2. Select2 Dinâmico
-    $('#inputCategoria').select2({
+    $('#inputArea, #inputTime, #inputTipo').select2({
         theme: 'bootstrap-5',
-        placeholder: 'Selecione ou digite...',
         tags: true,
-        tokenSeparators: [',', ' '],
+        placeholder: 'Selecione ou digite...',
         dropdownParent: $('#modalEdicao')
     });
 
-    // 3. DataTable
     $('#tabelaDispositivos thead tr').clone(true).addClass('filters').appendTo('#tabelaDispositivos thead');
-    var table = $('#tabelaDispositivos').DataTable({
+    $('#tabelaDispositivos').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
         pageLength: 50,
-        order: [[1, 'asc'], [6, 'desc']],
+        order: [[1, 'asc'], [8, 'desc']],
         initComplete: function () {
             var api = this.api();
             api.columns().every(function (colIdx) {
@@ -256,7 +192,7 @@ $(document).ready(function() {
     });
 });
 
-function abrirEdicao(mac, apelido, categoria) {
+function abrirEdicao(mac, apelido, area, time, tipo) {
     const form = document.getElementById('formEdicao');
     document.getElementById('inputMac').value = mac;
     document.getElementById('inputApelido').value = apelido;
@@ -264,58 +200,41 @@ function abrirEdicao(mac, apelido, categoria) {
     if (apelido) {
         form.action = `/atualizar_apelido/${mac}`;
         document.getElementById('inputApelido').name = "novo_apelido";
-        document.getElementById('inputCategoria').name = "novas_categorias";
+        document.getElementById('inputArea').name = "nova_area";
+        document.getElementById('inputTime').name = "novo_time";
+        document.getElementById('inputTipo').name = "novo_tipo";
     } else {
         form.action = "/salvar_apelido";
         document.getElementById('inputApelido').name = "apelido";
-        document.getElementById('inputCategoria').name = "categorias";
+        document.getElementById('inputArea').name = "area";
+        document.getElementById('inputTime').name = "time";
+        document.getElementById('inputTipo').name = "tipo";
     }
     
-    const $select = $('#inputCategoria');
-    $select.val(null).trigger('change');
-
-    if (categoria) {
-        const tags = categoria.split(',');
-        tags.forEach(tag => {
-            if ($select.find("option[value='" + tag + "']").length === 0) {
-                const newOption = new Option(tag, tag, true, true);
-                $select.append(newOption);
-            }
-        });
-        $select.val(tags).trigger('change');
-    }
+    $('#inputArea').val(area).trigger('change');
+    $('#inputTime').val(time).trigger('change');
+    $('#inputTipo').val(tipo).trigger('change');
     
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
 }
 
-function dispararImportacao() {
-    document.getElementById('inputFileBackup').click();
-}
+function dispararImportacao() { document.getElementById('inputFileBackup').click(); }
 
 function processarImportacao(input) {
     if (input.files.length === 0) return;
-    
-    const arquivo = input.files[0];
     const formData = new FormData();
-    formData.append("file", arquivo);
+    formData.append("file", input.files[0]);
     
-    fetch("/backup/importar", {
-        method: "POST",
-        body: formData
-    })
+    fetch("/backup/importar", { method: "POST", body: formData })
     .then(response => response.json())
     .then(data => {
         if (data.status === "sucesso") {
             alert("✅ Backup importado! " + data.message);
             window.location.reload();
         } else {
-            alert("❌ Erro no arquivo: " + data.message);
+            alert("❌ Erro: " + data.message);
         }
-    })
-    .catch(error => {
-        console.error("Erro na importação:", error);
-        alert("❌ Falha crítica ao conectar com o servidor.");
-    });
+    }).catch(() => alert("❌ Falha crítica ao importar ativos."));
 }
 </script>
 </body>

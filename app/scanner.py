@@ -67,10 +67,20 @@ def scan_network(db: Session):
                         db_device.rede_id = id_atual
                         db_device.ultima_vez_visto = datetime.now()
                     else:
+                        # SE FOR UM DISPOSITIVO NOVO:
+                        # Removeu-se a 'categoria' e adicionou-se 'area', 'time' e 'tipo' como 'N/A'
                         novo_dispositivo = Dispositivo(
-                            mac=mac, ip=host, hostname_real=hostname_real,
-                            apelido=None, vendor=vendor, status="up",
-                            rede_id=id_atual, categoria="Outros", ultima_vez_visto=datetime.now()
+                            mac=mac, 
+                            ip=host, 
+                            hostname_real=hostname_real,
+                            apelido=None, 
+                            vendor=vendor, 
+                            status="up",
+                            rede_id=id_atual, 
+                            area="N/A",  # Nova coluna estrutural
+                            time="N/A",  # Nova coluna estrutural
+                            tipo="N/A",  # Nova coluna estrutural
+                            ultima_vez_visto=datetime.now()
                         )
                         db.add(novo_dispositivo)
                 except Exception as e:
