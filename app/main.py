@@ -57,6 +57,10 @@ async def lifespan(app: FastAPI):
 # Inicialização do App
 app = FastAPI(lifespan=lifespan)
 
+# Permite servir arquivos locais da pasta app/static (se ela existir)
+if os.path.exists("app/static"):
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Configuração de templates
 templates = Jinja2Templates(directory="app/templates")
 templates.env.cache = None
@@ -69,11 +73,13 @@ def get_db():
     finally:
         db.close()
 
+# --- ROTAS DE NAVEGAÇÃO E SCAN ---
+
 @app.get("/")
-async def home(request: Request, background_tasks: BackgroundTasks, filtro: str = None, db: Session = Depends(get_db)):
+async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)): # background_tasks: BackgroundTasks, 
     print("[DEBUG] Rota HOME acessada. Iniciando scan síncrono...")
     
-    background_tasks.add_task(scan_network, db)
+    '''background_tasks.add_task(scan_network, db)'''
     
     query = db.query(models.Dispositivo)
     
@@ -91,6 +97,14 @@ async def home(request: Request, background_tasks: BackgroundTasks, filtro: str 
         context={"dispositivos": dispositivos, "filtro_atual": filtro}
     )
 
+@app.get("/scan_manual")
+async def scan_manual(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    logging.info("⚡ Scan Manual solicitado pelo usuário através da interface.")
+    background_tasks.add_task(scan_network, db)
+    return RedirectResponse(url="/", status_code=303)
+
+# --- ROTAS DE GERENCIAMENTO ---
+
 @app.post("/salvar_apelido")
 async def salvar_apelido(
     mac: str = Form(...), 
@@ -107,11 +121,13 @@ async def salvar_apelido(
             dispositivo.apelido = apelido
             dispositivo.categoria = ",".join(categorias)
             db.commit()
+            logging.info(f"💾 Salvo: {mac} como '{apelido}'")
             print(f"[SUCCESS] Apelido '{apelido}' salvo com sucesso!")
         else:
             print(f"[ERROR] Dispositivo com MAC {mac} não encontrado no banco.")
             
     except Exception as e:
+        logging.error(f"❌ Erro ao salvar apelido: {e}")
         print(f"[CRITICAL ERROR] Falha ao salvar no banco: {e}")
         db.rollback() # Desfaz qualquer erro para não travar o banco
         
@@ -194,6 +210,9 @@ async def importar_dados(file: UploadFile = File(...), db: Session = Depends(get
         contents = await file.read()
         df = pd.read_csv(BytesIO(contents), sep=';')
         
+        if df.empty or 'MAC' not in df.columns:
+             return {"status": "erro", "message": "Arquivo inválido ou coluna MAC ausente."}
+
         atualizados = 0
         for _, row in df.iterrows():
             disp = db.query(models.Dispositivo).filter(models.Dispositivo.mac == row['MAC']).first()
@@ -203,14 +222,16 @@ async def importar_dados(file: UploadFile = File(...), db: Session = Depends(get
                 atualizados += 1
         
         db.commit()
+        logging.info(f"📥 Importação: {atualizados} dispositivos sincronizados via backup.")
         return {"status": "sucesso", "message": f"{atualizados} dispositivos sincronizados."}
     except Exception as e:
+        logging.error(f"❌ Falha na importação de backup: {e}")
         return {"status": "erro", "message": str(e)}
 
 @app.get("/logs/visualizar")
 async def visualizar_logs():
     if not os.path.exists('scanner_rede.log'):
-        return {"message": "Sem logs ainda."}
-    with open('scanner_rede.log', 'r') as f:
-        # Retorna as últimas 100 linhas
+        return {"message": "Sem logs gerados até o momento."}
+    with open('scanner_rede.log', 'r', encoding='utf-8', errors='replace') as f:
+        # Retorna as últimas 100 linhas para não sobrecarregar o JSON
         return {"historico": f.readlines()[-100:]}

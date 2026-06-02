@@ -5,7 +5,9 @@ venv/
 # Arquivos de configuração sensíveis
 .env
 database.db
+rede.db
 known_devices.json
+scanner_rede.log
 
 # Cache do Python
 __pycache__/
