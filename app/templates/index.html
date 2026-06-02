@@ -72,13 +72,19 @@
             <h1 class="mb-0">Gerenciador de Ativos</h1>
             <p class="text-muted mb-0">Monitoramento Local e Inventário</p>
         </div>
+        
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-outline-secondary" id="btnTema" title="Trocar Tema">🌓</button>
             <div class="btn-group shadow-sm">
                 <a href="/dashboard" class="btn btn-outline-primary">📊 Dashboard</a>
                 <a href="/scan_manual" class="btn btn-primary">🔄 Scan Manual</a>
             </div>
+            
             <a href="/backup/exportar" class="btn btn-outline-info">📥 Exportar CSV</a>
+            
+            <button class="btn btn-outline-success" onclick="dispararImportacao()">📤 Importar CSV</button>
+            <input type="file" id="inputFileBackup" accept=".csv" style="display: none;" onchange="processarImportacao(this)">
+            
             <a href="/logs/visualizar" target="_blank" class="btn btn-outline-secondary">📜 Logs</a>
         </div>
     </div>
@@ -118,7 +124,8 @@
                         {% if disp.categoria %}
                             {% for tag in disp.categoria.split(',') %}
                                 <span class="tag-pill tag-{{ tag.lower().replace('/', '').replace(' ', '') }}">{{ tag }}</span>
-                            {% endfor %} {% else %}
+                            {% endfor %}
+                        {% else %}
                             <span class="tag-pill tag-default">SEM TAG</span>
                         {% endif %}
                     </td>
@@ -223,16 +230,13 @@ $(document).ready(function() {
     });
 });
 
-// Atualizado para mudar dinamicamente a rota do formulário se for edição
 function abrirEdicao(mac, apelido, categoria) {
     const form = document.getElementById('formEdicao');
     document.getElementById('inputMac').value = mac;
     document.getElementById('inputApelido').value = apelido;
     
-    // Se o ativo já possuir um apelido, usamos a rota de ATUALIZAR, caso contrário usamos a de SALVAR
     if (apelido) {
         form.action = `/atualizar_apelido/${mac}`;
-        // Renomeia os names dos inputs para bater com os argumentos esperados pela rota /atualizar_apelido
         document.getElementById('inputApelido').name = "novo_apelido";
         document.getElementById('inputCategoria').name = "novas_categorias";
     } else {
@@ -256,6 +260,38 @@ function abrirEdicao(mac, apelido, categoria) {
     }
     
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
+}
+
+// NOVO: Funções auxiliares para lidar com o envio assíncrono da importação
+function dispararImportacao() {
+    document.getElementById('inputFileBackup').click();
+}
+
+function processarImportacao(input) {
+    if (input.files.length === 0) return;
+    
+    const arquivo = input.files[0];
+    const formData = new FormData();
+    formData.append("file", arquivo);
+    
+    // Faz o envio via AJAX para o FastAPI sem tirar o usuário da tela
+    fetch("/backup/importar", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "sucesso") {
+            alert("✅ Backup importado! " + data.message);
+            window.location.reload(); // Recarrega para exibir os novos apelidos na tabela
+        } else {
+            alert("❌ Erro no arquivo: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Erro na importação:", error);
+        alert("❌ Falha crítica ao conectar com o servidor.");
+    });
 }
 </script>
 </body>
