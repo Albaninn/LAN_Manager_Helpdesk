@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
@@ -62,14 +63,31 @@ def get_db():
 
 @app.get("/")
 async def home(request: Request, filtro: str = None, db: Session = Depends(get_db)):
+    print("[DEBUG] Rota HOME acessada.")
     query = db.query(models.Dispositivo)
+
     if filtro == "online":
         query = query.filter(models.Dispositivo.status == "up")
     elif filtro == "cadastrados":
         query = query.filter(models.Dispositivo.apelido != None)
     
     dispositivos = query.order_by(models.Dispositivo.ip).all()
-    return templates.TemplateResponse(request=request, name="index.html", context={"dispositivos": dispositivos, "filtro_atual": filtro})
+    areas_existentes = [r[0] for r in db.query(func.distinct(models.Dispositivo.area)).all() if r[0] and r[0] != "N/A"]
+    times_existentes = [r[0] for r in db.query(func.distinct(models.Dispositivo.time)).all() if r[0] and r[0] != "N/A"]
+    tipos_existentes = [r[0] for r in db.query(func.distinct(models.Dispositivo.tipo)).all() if r[0] and r[0] != "N/A"]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "dispositivos": dispositivos, 
+            "filtro_atual": filtro,
+            "areas_disponiveis": sorted(areas_existentes),
+            "times_disponiveis": sorted(times_existentes),
+            "tipos_disponiveis": sorted(tipos_existentes)
+        }
+    )
+
 
 @app.get("/scan_manual")
 async def scan_manual(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

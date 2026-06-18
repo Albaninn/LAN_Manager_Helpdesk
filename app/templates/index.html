@@ -22,7 +22,48 @@
         .tag-tipo { background-color: #0d6efd; color: white; } /* Azul para Tipos */
         [data-bs-theme="light"] .custom-thead { background-color: #f8f9fa !important; color: #212529 !important; }
         [data-bs-theme="dark"] .custom-thead { background-color: #212529 !important; color: #f8f9fa !important; }
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection { background-color: #2b3035; color: #dee2e6; border-color: #495057; }
+        
+        /* --- CORREÇÃO DA COR DO RODAPÉ DO MODAL (DARK MODE) --- */
+        [data-bs-theme="dark"] .modal-footer { 
+            background-color: #2b3035 !important; 
+            border-top: 1px solid #495057 !important; 
+        }
+
+        /* --- CORREÇÃO COMPLETA DO SELECT2 (DARK MODE) --- */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection { 
+            background-color: #2b3035 !important; 
+            border-color: #495057 !important; 
+        }
+        
+        /* Texto principal selecionado no campo simples */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            color: #ffffff !important;
+        }
+
+        /* Caixa suspensa das opções abertas */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown {
+            background-color: #2b3035 !important;
+            border-color: #495057 !important;
+        }
+
+        /* Itens da lista suspensa */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option {
+            color: #dee2e6 !important;
+            background-color: #2b3035 !important;
+        }
+
+        /* Destaque ao passar o mouse nas opções */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
+        }
+
+        /* Input de digitação interna do Select2 */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-search__field {
+            background-color: #212529 !important;
+            color: #ffffff !important;
+            border-color: #495057 !important;
+        }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -116,6 +157,11 @@
                         <option value="ADM">ADM</option>
                         <option value="RH">RH</option>
                         <option value="SALES">SALES</option>
+                        {% for area in areas_disponiveis %}
+                            {% if area not in ['TI', 'ADM', 'RH', 'SALES'] %}
+                                <option value="{{ area }}">{{ area }}</option>
+                            {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="mb-3">
@@ -126,6 +172,11 @@
                         <option value="FINANCEIRO">Financeiro</option>
                         <option value="RECRUTAMENTO">Recrutamento</option>
                         <option value="COMERCIAL">Comercial</option>
+                        {% for time in times_disponiveis %}
+                            {% if time not in ['SUPORTE', 'INFRA', 'FINANCEIRO', 'RECRUTAMENTO', 'COMERCIAL'] %}
+                                <option value="{{ time }}">{{ time }}</option>
+                            {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="mb-0">
@@ -137,6 +188,11 @@
                         <option value="IMPRESSORA">Impressora</option>
                         <option value="SWITCH">Switch</option>
                         <option value="CAMERA">Camera</option>
+                        {% for tipo in tipos_disponiveis %}
+                            {% if tipo not in ['NOTEBOOK', 'DESKTOP', 'SERVIDOR', 'IMPRESSORA', 'SWITCH', 'CAMERA'] %}
+                                <option value="{{ tipo }}">{{ tipo }}</option>
+                            {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -210,12 +266,26 @@ function abrirEdicao(mac, apelido, area, time, tipo) {
         document.getElementById('inputTime').name = "time";
         document.getElementById('inputTipo').name = "tipo";
     }
-    
+
+    addTagSeNaoExistir('#inputArea', area);
+    addTagSeNaoExistir('#inputTime', time);
+    addTagSeNaoExistir('#inputTipo', tipo);
+
     $('#inputArea').val(area).trigger('change');
     $('#inputTime').val(time).trigger('change');
     $('#inputTipo').val(tipo).trigger('change');
     
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
+}
+
+function addTagSeNaoExistir(seletor, valor) {
+    if (valor && valor !== 'N/A') {
+        const $el = $(seletor);
+        if ($el.find("option[value='" + valor + "']").length === 0) {
+            const novaOpcao = new Option(valor, valor, true, true);
+            $el.append(novaOpcao);
+        }
+    }
 }
 
 function dispararImportacao() { document.getElementById('inputFileBackup').click(); }
