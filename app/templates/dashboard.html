@@ -2,15 +2,21 @@
 <html lang="pt-br" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>BI Manager Pro - Mapeamento Hierárquico</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN Manager - Painel de BI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 20px; }
-        .chart-card { border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: var(--bs-body-bg); position: relative; }
+        .chart-card { border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); background: var(--bs-body-bg); position: relative; transition: box-shadow 0.3s; }
+        .chart-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .actions-overlay { position: absolute; top: 15px; right: 15px; z-index: 10; display: flex; gap: 8px; }
         .btn-action { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .select-scroll { max-height: 150px; overflow-y: auto; border: 1px solid #444; border-radius: 5px; padding: 10px; background: #222; }
+        .select-scroll { max-height: 150px; overflow-y: auto; border: 1px solid var(--bs-border-color); border-radius: 5px; padding: 10px; background: var(--bs-tertiary-bg); }
+        
+        /* Ajustes de cores dinâmicas para o cabeçalho do Modal */
+        [data-bs-theme="light"] .modal-header-custom { background-color: #f8f9fa; color: #212529; }
+        [data-bs-theme="dark"] .modal-header-custom { background-color: #212529; color: #f8f9fa; }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -18,20 +24,21 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4 px-3">
         <div>
-            <h2 class="mb-0">⚙️ Painel de BI Pro</h2>
-            <p class="text-muted mb-0">Métricas analíticas segmentadas de ativos da rede local</p>
+            <h2 class="mb-0">📊 Painel Estratégico de BI</h2>
+            <p class="text-muted mb-0">Cruzamentos analíticos de ativos: Área ➔ Time ➔ Tipo</p>
         </div>
         <div class="d-flex gap-2">
             <button class="btn btn-success px-4 fw-bold" onclick="abrirModalNovo()">+ Novo Gráfico</button>
+            <button class="btn btn-outline-danger" onclick="resetarConfiguracoesAll()" title="Limpar cache antigo">🔄 Resetar Painel</button>
             <button class="btn btn-outline-secondary" id="btnTema">🌓</button>
-            <a href="/" class="btn btn-outline-primary">Voltar</a>
+            <a href="/" class="btn btn-outline-primary">Voltar à Lista</a>
         </div>
     </div>
 
     <div class="row g-3 mb-4 px-3">
-        <div class="col-md-4"><div class="card p-3 text-center bg-primary text-white border-0"><h6>Total Real</h6><h3>{{ total_real }}</h3></div></div>
-        <div class="col-md-4"><div class="card p-3 text-center bg-success text-white border-0"><h6>Online</h6><h3>{{ stats_status.up }}</h3></div></div>
-        <div class="col-md-4"><div class="card p-3 text-center bg-danger text-white border-0"><h6>Offline</h6><h3>{{ stats_status.down }}</h3></div></div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-primary text-white border-0 shadow-sm"><h6>Total de Ativos Mapeados</h6><h3>{{ total_real }}</h3></div></div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-success text-white border-0 shadow-sm"><h6>Dispositivos Online (UP)</h6><h3>{{ stats_status.up }}</h3></div></div>
+        <div class="col-md-4"><div class="card p-3 text-center bg-danger text-white border-0 shadow-sm"><h6>Dispositivos Offline (DOWN)</h6><h3>{{ stats_status.down }}</h3></div></div>
     </div>
 
     <div id="dashboardGrid" class="grid-dashboard px-3"></div>
@@ -39,63 +46,64 @@
 
 <div class="modal fade" id="modalBuilder" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitulo">Configurar Painel</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content shadow border-0">
+            <div class="modal-header modal-header-custom border-bottom">
+                <h5 class="modal-title fw-bold" id="modalTitulo">📊 Configurar Visão do Gráfico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body py-4">
                 <input type="hidden" id="cfgId">
-                <div class="row">
+                <div class="row g-4">
                     <div class="col-md-6 border-end">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Título</label>
-                            <input type="text" id="cfgTitulo" class="form-control" placeholder="Ex: Equipamentos por Equipe">
+                            <label class="form-label fw-bold">Título do Gráfico</label>
+                            <input type="text" id="cfgTitulo" class="form-control" placeholder="Ex: Tipo de Ativos por Setor">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Tipo de Gráfico</label>
+                            <label class="form-label fw-bold">Formato Visual</label>
                             <select id="cfgTipo" class="form-select">
-                                <option value="bar">Barras Empilhadas</option>
-                                <option value="doughnut">Donut</option>
-                                <option value="pie">Pizza</option>
+                                <option value="bar">Barras Empilhadas (Ideal para Cruzamentos)</option>
+                                <option value="doughnut">Rosca / Donut (Visão Simples)</option>
+                                <option value="pie">Pizza (Visão Simples)</option>
                             </select>
                         </div>
                         <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label fw-bold">Eixo X</label>
+                                <label class="form-label fw-bold text-primary">Métrica Base (Eixo X)</label>
                                 <select id="cfgEixoX" class="form-select" onchange="atualizarOpcoesSelecao()">
-                                    <option value="area">Área / Setor</option>
-                                    <option value="time">Time / Equipe</option>
+                                    <option value="area">Área (Setor)</option>
+                                    <option value="time">Time (Equipe)</option>
                                     <option value="tipo">Tipo de Ativo</option>
                                     <option value="vendor">Fabricante</option>
-                                    <option value="status">Status</option>
+                                    <option value="status">Status (UP/DOWN)</option>
                                 </select>
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-bold">Cruzar com</label>
+                                <label class="form-label fw-bold text-success">Cruzar Com (Legenda)</label>
                                 <select id="cfgCruzamento" class="form-select" onchange="atualizarOpcoesSelecao()">
-                                    <option value="none">Nenhum (Simples)</option>
+                                    <option value="none">Nenhum (Gráfico Simples)</option>
                                     <option value="tipo">Tipo de Ativo</option>
-                                    <option value="time">Time / Equipe</option>
-                                    <option value="area">Área / Setor</option>
-                                    <option value="status">Status</option>
+                                    <option value="time">Time (Equipe)</option>
+                                    <option value="area">Área (Setor)</option>
+                                    <option value="status">Status (UP/DOWN)</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold text-info">Filtros Ativos</label>
-                        <p class="small text-muted mb-2">Selecione para incluir (vazio exibe todos):</p>
+                        <label class="form-label fw-bold text-info">Filtros Avançados de Escopo</label>
+                        <p class="small text-muted mb-2">Marque itens para incluí-los (deixe vazio para carregar tudo):</p>
                         <div id="listaSelecao" class="select-scroll"></div>
-                        <div class="form-check form-switch mt-2">
+                        <div class="form-check form-switch mt-3">
                             <input class="form-check-input" type="checkbox" id="cfgModoInverso">
-                            <label class="form-check-label text-danger">Modo Ocultar selecionados (Blacklist)</label>
+                            <label class="form-check-label text-danger fw-bold" for="cfgModoInverso">Modo Inverso (Blacklist / Ocultar selecionados)</label>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary w-100 fw-bold py-2" onclick="salvarGrafico()">Fixar Painel</button>
+            <div class="modal-footer bg-light border-0">
+                <button class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary px-5 fw-bold" onclick="salvarGrafico()">Fixar no Painel</button>
             </div>
         </div>
     </div>
@@ -104,8 +112,18 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const dadosBrutos = {{ dispositivos_json | safe }};
-    let graficos = JSON.parse(localStorage.getItem('bi_v5_config')) || [];
+    const STORAGE_KEY = 'bi_v6_hierarquico_config';
+    let graficos = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     const modalInst = new bootstrap.Modal(document.getElementById('modalBuilder'));
+
+    // Criar visões iniciais automáticas se o painel estiver vazio para o usuário não ver uma tela em branco
+    if (graficos.length === 0) {
+        graficos = [
+            { id: 1, titulo: "Dispositivos por Setor e Tipo", eixoX: "area", cruzamento: "tipo", tipo: "bar", itens: [], modoInverso: false },
+            { id: 2, titulo: "Hardware Alocado por Equipes", eixoX: "time", cruzamento: "tipo", tipo: "bar", itens: [], modoInverso: false }
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(graficos));
+    }
 
     function obterOpcoesUnicas() {
         const opcoes = new Set();
@@ -136,6 +154,9 @@
     function abrirModalNovo() {
         document.getElementById('cfgId').value = '';
         document.getElementById('cfgTitulo').value = '';
+        document.getElementById('cfgEixoX').value = 'area';
+        document.getElementById('cfgCruzamento').value = 'tipo';
+        document.getElementById('cfgTipo').value = 'bar';
         document.getElementById('cfgModoInverso').checked = false;
         atualizarOpcoesSelecao();
         modalInst.show();
@@ -158,7 +179,7 @@
         const id = document.getElementById('cfgId').value;
         const novoObj = {
             id: id ? parseInt(id) : Date.now(),
-            titulo: document.getElementById('cfgTitulo').value || 'Métrica',
+            titulo: document.getElementById('cfgTitulo').value || 'Nova Métrica',
             eixoX: document.getElementById('cfgEixoX').value,
             cruzamento: document.getElementById('cfgCruzamento').value,
             tipo: document.getElementById('cfgTipo').value,
@@ -167,7 +188,7 @@
         };
         if (id) { graficos[graficos.findIndex(g => g.id === parseInt(id))] = novoObj; } 
         else { graficos.push(novoObj); }
-        localStorage.setItem('bi_v5_config', JSON.stringify(graficos));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(graficos));
         modalInst.hide();
         renderizar();
     }
@@ -196,8 +217,9 @@
     const stringToColor = (s) => {
         if(s === 'UP' || s === 'ONLINE') return '#198754';
         if(s === 'DOWN' || s === 'OFFLINE') return '#dc3545';
+        if(s === 'N/A') return '#6c757d';
         let h = 0; for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-        return `hsl(${Math.abs(h) % 360}, 65%, 50%)`;
+        return `hsl(${Math.abs(h) % 360}, 70%, 45%)`;
     };
 
     function renderizar() {
@@ -205,13 +227,13 @@
         grid.innerHTML = '';
         graficos.forEach(conf => {
             const card = document.createElement('div');
-            card.className = 'card chart-card p-4';
+            card.className = 'card chart-card p-4 shadow-sm';
             card.innerHTML = `
                 <div class="actions-overlay">
-                    <button class="btn btn-sm btn-primary btn-action" onclick="editarGrafico(${conf.id})">✎</button>
-                    <button class="btn btn-sm btn-danger btn-action" onclick="remover(${conf.id})">×</button>
+                    <button class="btn btn-sm btn-outline-primary btn-action bg-body" onclick="editarGrafico(${conf.id})">✎</button>
+                    <button class="btn btn-sm btn-outline-danger btn-action bg-body" onclick="remover(${conf.id})">×</button>
                 </div>
-                <h6 class="fw-bold text-center mb-3 text-uppercase">${conf.titulo}</h6>
+                <h6 class="fw-bold text-center mb-3 text-uppercase text-secondary">${conf.titulo}</h6>
                 <div style="height: 320px;"><canvas id="c-${conf.id}"></canvas></div>`;
             grid.appendChild(card);
 
@@ -229,19 +251,35 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: conf.tipo === 'bar' ? { x: { stacked: true }, y: { stacked: true } } : {}
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: conf.tipo === 'bar' ? { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } : {}
                 }
             });
         });
     }
 
-    function remover(id) { graficos = graficos.filter(g => g.id !== id); localStorage.setItem('bi_v5_config', JSON.stringify(graficos)); renderizar(); }
+    function remover(id) { 
+        graficos = graficos.filter(g => g.id !== id); 
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(graficos)); 
+        renderizar(); 
+    }
+
+    function resetarConfiguracoesAll() {
+        if(confirm("Deseja redefinir o painel para limpar os gráficos antigos do sistema?")) {
+            localStorage.removeItem(STORAGE_KEY);
+            window.location.reload();
+        }
+    }
+
+    // Gerenciamento de Tema
+    const htmlElement = document.documentElement;
+    htmlElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'dark');
     document.getElementById('btnTema').onclick = () => {
-        const n = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-bs-theme', n);
+        const n = htmlElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+        htmlElement.setAttribute('data-bs-theme', n);
         localStorage.setItem('theme', n);
     };
-    document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'dark');
+
     renderizar();
 </script>
 </body>
