@@ -64,6 +64,11 @@
             color: #ffffff !important;
             border-color: #495057 !important;
         }
+
+        /* --- ESTILOS DA TIMELINE DE HISTÓRICO --- */
+        .timeline-historico { max-height: 220px; overflow-y: auto; padding-left: 12px; border-left: 2px solid var(--bs-border-color); }
+        .timeline-item { position: relative; margin-bottom: 14px; font-size: 0.85rem; }
+        .timeline-item::before { content: "•"; position: absolute; left: -19px; top: -3px; color: #fd7e14; font-size: 1.3rem; }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -71,7 +76,7 @@
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="mb-0">Gerenciador de Ativos</h1>
+            <h1>Gerenciador de Ativos</h1>
             <p class="text-muted mb-0">Monitoramento Local e Inventário</p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -138,62 +143,73 @@
 </div>
 
 <div class="modal fade" id="modalEdicao" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <form id="formEdicao" action="/salvar_apelido" method="post" class="modal-content shadow border-0">
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title">📌 Gerenciar Ativo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body py-4">
-                <input type="hidden" name="mac" id="inputMac">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Apelido / Usuário</label>
-                    <input type="text" name="apelido" id="inputApelido" class="form-control" placeholder="Ex: Notebook - João">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Área / Setor</label>
-                    <select name="area" id="inputArea" class="form-select">
-                        <option value="TI">TI</option>
-                        <option value="ADM">ADM</option>
-                        <option value="RH">RH</option>
-                        <option value="SALES">SALES</option>
-                        {% for area in areas_disponiveis %}
-                            {% if area not in ['TI', 'ADM', 'RH', 'SALES'] %}
-                                <option value="{{ area }}">{{ area }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Time / Subárea</label>
-                    <select name="time" id="inputTime" class="form-select">
-                        <option value="SUPORTE">Suporte</option>
-                        <option value="INFRA">Infra</option>
-                        <option value="FINANCEIRO">Financeiro</option>
-                        <option value="RECRUTAMENTO">Recrutamento</option>
-                        <option value="COMERCIAL">Comercial</option>
-                        {% for time in times_disponiveis %}
-                            {% if time not in ['SUPORTE', 'INFRA', 'FINANCEIRO', 'RECRUTAMENTO', 'COMERCIAL'] %}
-                                <option value="{{ time }}">{{ time }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-0">
-                    <label class="form-label fw-bold">Tipo de Equipamento</label>
-                    <select name="tipo" id="inputTipo" class="form-select">
-                        <option value="NOTEBOOK">Notebook</option>
-                        <option value="DESKTOP">Desktop</option>
-                        <option value="SERVIDOR">Servidor</option>
-                        <option value="IMPRESSORA">Impressora</option>
-                        <option value="SWITCH">Switch</option>
-                        <option value="CAMERA">Camera</option>
-                        {% for tipo in tipos_disponiveis %}
-                            {% if tipo not in ['NOTEBOOK', 'DESKTOP', 'SERVIDOR', 'IMPRESSORA', 'SWITCH', 'CAMERA'] %}
-                                <option value="{{ tipo }}">{{ tipo }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
+                <div class="row">
+                    <div class="col-md-7 border-end">
+                        <input type="hidden" name="mac" id="inputMac">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Apelido / Usuário</label>
+                            <input type="text" name="apelido" id="inputApelido" class="form-control" placeholder="Ex: Notebook - João">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Área / Setor</label>
+                            <select name="area" id="inputArea" class="form-select">
+                                <option value="TI">TI</option>
+                                <option value="ADM">ADM</option>
+                                <option value="RH">RH</option>
+                                <option value="SALES">SALES</option>
+                                {% for area in areas_disponiveis %}
+                                    {% if area not in ['TI', 'ADM', 'RH', 'SALES'] %}
+                                        <option value="{{ area }}">{{ area }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Time / Subárea</label>
+                            <select name="time" id="inputTime" class="form-select">
+                                <option value="SUPORTE">Suporte</option>
+                                <option value="INFRA">Infra</option>
+                                <option value="FINANCEIRO">Financeiro</option>
+                                <option value="RECRUTAMENTO">Recrutamento</option>
+                                <option value="COMERCIAL">Comercial</option>
+                                {% for time in times_disponiveis %}
+                                    {% if time not in ['SUPORTE', 'INFRA', 'FINANCEIRO', 'RECRUTAMENTO', 'COMERCIAL'] %}
+                                        <option value="{{ time }}">{{ time }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label fw-bold">Tipo de Equipamento</label>
+                            <select name="tipo" id="inputTipo" class="form-select">
+                                <option value="NOTEBOOK">Notebook</option>
+                                <option value="DESKTOP">Desktop</option>
+                                <option value="SERVIDOR">Servidor</option>
+                                <option value="IMPRESSORA">Impressora</option>
+                                <option value="SWITCH">Switch</option>
+                                <option value="CAMERA">Camera</option>
+                                {% for tipo in tipos_disponiveis %}
+                                    {% if tipo not in ['NOTEBOOK', 'DESKTOP', 'SERVIDOR', 'IMPRESSORA', 'SWITCH', 'CAMERA'] %}
+                                        <option value="{{ tipo }}">{{ tipo }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold text-warning mb-2">🕒 Histórico de Mudanças (DHCP)</label>
+                        <div id="containerHistorico" class="timeline-historico">
+                            <p class="text-muted small">Carregando saltos de IP...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0">
@@ -275,11 +291,36 @@ function abrirEdicao(mac, apelido, area, time, tipo) {
     $('#inputTime').val(time).trigger('change');
     $('#inputTipo').val(tipo).trigger('change');
     
+    // --- NOVO: Limpa o container e faz o Fetch assíncrono do histórico de IPs ---
+    const container = document.getElementById('containerHistorico');
+    container.innerHTML = '<p class="text-muted small">Buscando histórico de saltos...</p>';
+    
+    fetch(`/dispositivo/historico/${mac}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-muted small pt-2">Nenhuma alteração de IP registrada para este MAC (IP Estável).</p>';
+            } else {
+                container.innerHTML = '';
+                data.forEach(item => {
+                    container.innerHTML += `
+                        <div class="timeline-item">
+                            <span class="fw-bold text-info">${item.ip_antigo}</span> ➔ 
+                            <span class="fw-bold text-success">${item.ip_novo}</span><br>
+                            <small class="text-muted">${item.data}</small>
+                        </div>`;
+                });
+            }
+        })
+        .catch(() => {
+            container.innerHTML = '<p class="text-danger small">Falha ao conectar com a linha do tempo.</p>';
+        });
+    
     new bootstrap.Modal(document.getElementById('modalEdicao')).show();
 }
 
 function addTagSeNaoExistir(seletor, valor) {
-    if (valor && valor !== 'N/A') {
+    if (value = valor && valor !== 'N/A') {
         const $el = $(seletor);
         if ($el.find("option[value='" + valor + "']").length === 0) {
             const novaOpcao = new Option(valor, valor, true, true);

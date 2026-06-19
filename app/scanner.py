@@ -61,6 +61,17 @@ def scan_network(db: Session):
                     db_device = db.query(Dispositivo).filter(Dispositivo.mac == mac).first()
 
                     if db_device:
+                        # --- ATUALIZAÇÃO AQUI: Se o IP mudou, insere no histórico antes de atualizar o principal ---
+                        if db_device.ip != host:
+                            novo_historico = models.HistoricoIP(
+                                mac=mac,
+                                ip_antigo=db_device.ip,
+                                ip_novo=host,
+                                data_mudanca=datetime.now()
+                            )
+                            db.add(novo_historico)
+                            print(f"[HISTÓRICO] MAC {mac} mudou de IP: {db_device.ip} ➔ {host}")
+
                         db_device.ip = host
                         db_device.hostname_real = hostname_real
                         db_device.status = "up"
@@ -68,7 +79,6 @@ def scan_network(db: Session):
                         db_device.ultima_vez_visto = datetime.now()
                     else:
                         # SE FOR UM DISPOSITIVO NOVO:
-                        # Removeu-se a 'categoria' e adicionou-se 'area', 'time' e 'tipo' como 'N/A'
                         novo_dispositivo = Dispositivo(
                             mac=mac, 
                             ip=host, 
@@ -77,9 +87,9 @@ def scan_network(db: Session):
                             vendor=vendor, 
                             status="up",
                             rede_id=id_atual, 
-                            area="N/A",  # Nova coluna estrutural
-                            time="N/A",  # Nova coluna estrutural
-                            tipo="N/A",  # Nova coluna estrutural
+                            area="N/A",  
+                            time="N/A",  
+                            tipo="N/A",  
                             ultima_vez_visto=datetime.now()
                         )
                         db.add(novo_dispositivo)

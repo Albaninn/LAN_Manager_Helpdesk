@@ -206,3 +206,14 @@ async def visualizar_logs():
         return {"message": "Nenhum log gerado."}
     with open('scanner_rede.log', 'r', encoding='utf-8', errors='replace') as f:
         return {"historico": f.readlines()[-100:]}
+    
+@app.get("/dispositivo/historico/{mac}")
+async def obter_historico_dispositivo(mac: str, db: Session = Depends(get_db)):
+    registros = db.query(models.HistoricoIP).filter(models.HistoricoIP.mac == mac).order_by(models.HistoricoIP.data_mudanca.desc()).all()
+    return [
+        {
+            "ip_antigo": r.ip_antigo,
+            "ip_novo": r.ip_novo,
+            "data": r.data_mudanca.strftime("%d/%m/%Y %H:%M:%S")
+        } for r in registros
+    ]
