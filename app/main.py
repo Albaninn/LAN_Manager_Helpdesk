@@ -217,3 +217,32 @@ async def obter_historico_dispositivo(mac: str, db: Session = Depends(get_db)):
             "data": r.data_mudanca.strftime("%d/%m/%Y %H:%M:%S")
         } for r in registros
     ]
+
+if __name__ == "__main__":
+    import uvicorn
+    import threading
+    import webview
+    import time
+
+    # 1. Função para rodar o backend FastAPI em background
+    def rodar_servidor():
+        uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+
+    # Inicia o servidor em paralelo
+    server_thread = threading.Thread(target=rodar_servidor, daemon=True)
+    server_thread.start()
+
+    # Pausa rápida de 1 segundo para o FastAPI estabilizar as rotas
+    time.sleep(1)
+
+    # 2. Abre a janela desktop nativa do Windows espelhando a interface
+    webview.create_window(
+        title="LAN Manager & Helpdesk", 
+        url="http://127.0.0.1:8000",
+        width=1280, 
+        height=800,
+        resizable=True
+    )
+    
+    # Executa a renderização da janela (bloqueante)
+    webview.start()
