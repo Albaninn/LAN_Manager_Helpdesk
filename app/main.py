@@ -7,15 +7,20 @@ from sqlalchemy import func
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
-import os
 import logging
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
 
-from .database import SessionLocal, engine
-from . import models
-from .scanner import scan_network
+import sys
+import os
+
+# Força o Python a enxergar a pasta raiz do projeto
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.database import SessionLocal, engine
+from app import models
+from app.scanner import scan_network
 
 logging.basicConfig(
     filename='scanner_rede.log',
