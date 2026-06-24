@@ -8,3 +8,5 @@ sqlalchemy
 scapy
 apscheduler
 pandas
+pywebview
+pythonnet
