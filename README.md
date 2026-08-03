@@ -73,7 +73,7 @@ O script irá:
 
 Instalar/validar os módulos Python do requirements.txt silenciosamente.
 
-Identificar a sub-rede ativa da máquina local (ex: 192.168.85.0/24).
+Identificar a sub-rede ativa da máquina local (ex: 192.x.x.0/24).
 
 Criar um atalho na pasta de Inicialização do Windows (Startup) para rodar com o sistema.
 
@@ -84,7 +84,7 @@ Para fixar faixas de IP específicas a serem varridas pelo Nmap (ou múltiplas r
 
 ```
 # Configuração de Redes (Separe por espaços para múltiplas sub-redes)
-NETWORK_RANGES="192.168.85.0/24 192.168.200.0/24"
+NETWORK_RANGES="192.x.x.0/24 192.x.x.0/24"
 
 # Segurança
 SECRET_KEY="sua-chave-secreta-aqui"
